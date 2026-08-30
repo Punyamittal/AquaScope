@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AquaScope</string>
+    <string name="tagline">Acoustic moisture sensing</string>
+    <string name="locations_heading">Scan locations</string>
+    <string name="empty_locations_title">No locations yet</string>
+    <string name="empty_locations_body">Create a location, set a dry baseline, then compare later scans for moisture anomalies.</string>
+    <string name="new_location">New location</string>
+    <string name="start_scan">Start scan</string>
+    <string name="hold_instruction">Press the phone flat against the wall or pipe so the speaker and mic both touch the surface.</string>
+    <string name="scanning">Listening to the surface…</string>
+    <string name="analyzing">Extracting acoustic signature…</string>
+    <string name="anomaly_score">Anomaly score</string>
+    <string name="set_baseline">Save as baseline</string>
+    <string name="add_point">Scan next point</string>
+    <string name="history_title">Scan history</string>
+    <string name="empty_history">No scans recorded yet</string>
+    <string name="view_report">View session report</string>
+    <string name="generate_report">Generate report</string>
+    <string name="share_report">Share report</string>
+    <string name="done">Done</string>
+    <string name="report_eyebrow">Session report</string>
+    <string name="report_max">Max</string>
+    <string name="report_avg">Avg</string>
+    <string name="report_points">Points</string>
+    <string name="report_detail_heading">Point detail</string>
+</resources>

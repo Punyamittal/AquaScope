@@ -1,0 +1,98 @@
+[
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_ic_add.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\ic_add.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\layout_item_result_card.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\layout\\item_result_card.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_bg_pulse_ring.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\bg_pulse_ring.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\mipmap-hdpi_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\mipmap-hdpi\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\mipmap-anydpi-v26\\ic_launcher.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_bg_result_ok.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\bg_result_ok.xml"
+    },
+    {
+        "merged": "com.aquascope.app-merged_res-35:/layout_activity_scan.xml.flat",
+        "source": "com.aquascope.app-main-37:/layout/activity_scan.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_bg_result_alert.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\bg_result_alert.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_bg_surface_panel.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\bg_surface_panel.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "com.aquascope.app-merged_res-35:/layout_activity_report.xml.flat",
+        "source": "com.aquascope.app-main-37:/layout/activity_report.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\mipmap-hdpi_ic_launcher.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\mipmap-hdpi\\ic_launcher.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_bg_screen.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\bg_screen.xml"
+    },
+    {
+        "merged": "com.aquascope.app-merged_res-35:/layout_item_report_point.xml.flat",
+        "source": "com.aquascope.app-main-37:/layout/item_report_point.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\layout_item_location.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\layout\\item_location.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\layout_activity_scan.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\layout\\activity_scan.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_ic_waveform.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\ic_waveform.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_ic_scan.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\ic_scan.xml"
+    },
+    {
+        "merged": "com.aquascope.app-merged_res-35:/layout_activity_history.xml.flat",
+        "source": "com.aquascope.app-main-37:/layout/activity_history.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\layout_item_history.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\layout\\item_history.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_bg_brand_band.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\bg_brand_band.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\drawable_bg_result_warn.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\drawable\\bg_result_warn.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\layout_activity_history.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\layout\\activity_history.xml"
+    },
+    {
+        "merged": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-merged_res-35:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\punya mittal\\.gradle\\daemon\\8.2\\com.aquascope.app-main-37:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+    }
+]

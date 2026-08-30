@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Hydrosonic instrument palette -->
+    <color name="bg_mist">#E4F0EE</color>
+    <color name="bg_mist_deep">#C8E0DC</color>
+    <color name="surface">#F7FBFA</color>
+    <color name="surface_elevated">#FFFFFF</color>
+
+    <color name="brand">#0B4F54</color>
+    <color name="brand_mid">#167A7F</color>
+    <color name="brand_bright">#2A9D8F</color>
+    <color name="ink">#122326</color>
+    <color name="ink_muted">#5A6E71</color>
+    <color name="ink_faint">#8A9A9C</color>
+    <color name="hairline">#C5D6D4</color>
+
+    <color name="primary">@color/brand</color>
+    <color name="primary_dark">#083C40</color>
+    <color name="accent">@color/brand_bright</color>
+    <color name="background">@color/bg_mist</color>
+
+    <color name="status_ok">#1F7A4D</color>
+    <color name="status_ok_bg">#D8F0E4</color>
+    <color name="status_warn">#B56B12</color>
+    <color name="status_warn_bg">#F7E8D0</color>
+    <color name="status_alert">#B13A3A</color>
+    <color name="status_alert_bg">#F5DADA</color>
+
+    <color name="on_brand">#F4FFFE</color>
+    <color name="ripple">#33167A7F</color>
+</resources>

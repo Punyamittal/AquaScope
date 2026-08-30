@@ -1,0 +1,1 @@
+# AquaScope ProGuard rules

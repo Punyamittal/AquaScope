@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AquaScope" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/brand</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorSecondary">@color/brand_bright</item>
+        <item name="colorAccent">@color/brand_bright</item>
+        <item name="android:statusBarColor">@color/brand</item>
+        <item name="android:navigationBarColor">@color/bg_mist</item>
+        <item name="android:windowBackground">@drawable/bg_screen</item>
+        <item name="android:textColorPrimary">@color/ink</item>
+        <item name="android:textColorSecondary">@color/ink_muted</item>
+        <item name="materialButtonStyle">@style/Widget.AquaScope.Button</item>
+    </style>
+
+    <style name="Text.AquaScope.Brand" parent="TextAppearance.Material3.DisplaySmall">
+        <item name="android:textColor">@color/brand</item>
+        <item name="android:textSize">@dimen/brand_size</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="Text.AquaScope.Headline" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="Text.AquaScope.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">@color/ink_muted</item>
+        <item name="android:lineSpacingMultiplier">1.25</item>
+    </style>
+
+    <style name="Text.AquaScope.Score" parent="TextAppearance.Material3.DisplayLarge">
+        <item name="android:textSize">@dimen/score_size</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <style name="Widget.AquaScope.Button" parent="Widget.Material3.Button">
+        <item name="android:textAllCaps">false</item>
+        <item name="cornerRadius">@dimen/btn_radius</item>
+        <item name="backgroundTint">@color/brand</item>
+        <item name="android:textColor">@color/on_brand</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
+
+    <style name="Widget.AquaScope.Button.Secondary" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:textAllCaps">false</item>
+        <item name="cornerRadius">@dimen/btn_radius</item>
+        <item name="strokeColor">@color/brand</item>
+        <item name="android:textColor">@color/brand</item>
+        <item name="android:minHeight">48dp</item>
+    </style>
+
+    <style name="Widget.AquaScope.Button.Ghost" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/brand_mid</item>
+    </style>
+</resources>
