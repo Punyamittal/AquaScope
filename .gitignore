@@ -41,3 +41,6 @@ screenmind/*.db-shm
 screenmind/settings.json
 screenmind/.pytest_cache/
 
+
+bin/
+*/bin/

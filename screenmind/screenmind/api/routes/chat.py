@@ -11,6 +11,7 @@ from pathlib import Path
 from PIL import Image as PILImage
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from starlette.responses import StreamingResponse
 
 from screenmind.config import settings
@@ -82,7 +83,7 @@ async def chat_with_memory(request: Request):
 
     t0 = time.time()
     body = await request.json()
-    question = body.get("question", "").strip()
+    question = (body.get("question") or body.get("message") or "").strip()
     history = body.get("history", [])
     context_range = body.get("context_range", "all")
     if not question:
@@ -568,5 +569,29 @@ async def chat_with_memory(request: Request):
         elapsed = round(time.time() - t0, 1)
         yield send_progress(f"✅ {elapsed}s")
         yield send_answer(answer, sources, mode, elapsed)
+
+    wants_stream = body.get("stream", True)
+    accept_header = request.headers.get("accept", "")
+    if "application/json" in accept_header and "text/event-stream" not in accept_header:
+        wants_stream = False
+
+    if not wants_stream:
+        last_answer = None
+        async for chunk in generate():
+            if chunk.startswith("data: "):
+                try:
+                    payload = _json.loads(chunk[6:].strip())
+                    if payload.get("type") == "answer":
+                        last_answer = payload
+                except Exception:
+                    pass
+        if last_answer:
+            return JSONResponse(last_answer)
+        return JSONResponse({
+            "answer": "No response generated",
+            "sources": [],
+            "mode": "chat",
+            "elapsed": round(time.time() - t0, 1),
+        })
 
     return StreamingResponse(generate(), media_type="text/event-stream")

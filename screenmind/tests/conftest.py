@@ -76,7 +76,7 @@ def app(db):
     original_pin = settings.dashboard_pin_hash
     settings.dashboard_pin_hash = ''
 
-    application = create_app(database=db)
+    application = create_app(database=db, embedder=False)
 
     # Also patch the module-level db references in route modules
     # since they may have been imported with a previous db value
@@ -91,8 +91,9 @@ def app(db):
     import screenmind.api.routes.agents as _ag
     import screenmind.api.routes.search as _sr
     import screenmind.api.routes.chat as _ch
+    import screenmind.api.routes.aquascope as _aq
 
-    for mod in [_tl, _bm, _st, _dt, _ss, _rw, _sm, _mt, _ag, _sr, _ch]:
+    for mod in [_tl, _bm, _st, _dt, _ss, _rw, _sm, _mt, _ag, _sr, _ch, _aq]:
         mod.db = db
 
     yield application

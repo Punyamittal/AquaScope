@@ -27,7 +27,7 @@ async def get_timeline(
     for a in activities:
         if a.get("screenshot_path"):
             a["screenshot_url"] = f"/api/screenshot/{a['id']}"
-    return {"date": target_date, "activities": activities}
+    return {"date": target_date, "activities": activities, "items": activities}
 
 
 @router.get("/activity/{activity_id}")

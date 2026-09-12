@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="10dp"
-    android:background="@drawable/bg_status_card"
+    android:background="@drawable/bg_screenmind_card"
     android:orientation="vertical"
     android:padding="14dp">
 
@@ -21,7 +21,7 @@
             android:fontFamily="sans-serif-medium"
             android:letterSpacing="0.08"
             android:textColor="@color/cyan"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/textItemCategory"
@@ -52,4 +52,17 @@
         android:lineSpacingExtra="3dp"
         android:textColor="@color/warm_white"
         android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/textItemDetails"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="#1200E5FF"
+        android:fontFamily="monospace"
+        android:lineSpacingExtra="2dp"
+        android:padding="8dp"
+        android:textColor="#CCF5F5F0"
+        android:textSize="11sp"
+        android:visibility="gone" />
 </LinearLayout>

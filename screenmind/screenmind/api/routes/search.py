@@ -19,56 +19,55 @@ async def search_activities(
     date_to: Optional[str] = Query(default=None),
 ):
     """Semantic search across all activities."""
-    if not embedder:
-        raise HTTPException(status_code=503, detail="Embedder not available")
-
     conn = db._get_conn()
-
-    where_clauses = ["status = 'ok'", "embedding IS NOT NULL"]
-    params = []
-
-    if category:
-        where_clauses.append("category = ?")
-        params.append(category)
-    if date_from:
-        where_clauses.append("DATE(timestamp) >= ?")
-        params.append(date_from)
-    if date_to:
-        where_clauses.append("DATE(timestamp) <= ?")
-        params.append(date_to)
-
-    where = " AND ".join(where_clauses)
-    rows = conn.execute(
-        f"""
-        SELECT id, timestamp, app_name, category, summary, details,
-               visible_text, bookmarked, embedding, ocr_text
-        FROM activities
-        WHERE {where}
-        ORDER BY timestamp DESC
-        LIMIT 500
-        """,
-        params,
-    ).fetchall()
 
     activities_data = []
     embeddings_list = []
 
-    for row in rows:
-        row_dict = dict(row)
-        emb = db._decode_embedding(row_dict.get("embedding"))
-        if emb:
-            row_dict.pop("embedding", None)
-            ocr_full = row_dict.pop("ocr_text", None) or ""
-            row_dict["ocr_snippet"] = ocr_full[:200] if ocr_full else ""
-            row_dict["screenshot_url"] = f"/api/screenshot/{row_dict['id']}"
-            activities_data.append(row_dict)
-            embeddings_list.append(emb)
+    # If embedder is available, query rows with embeddings for semantic search
+    if embedder:
+        where_clauses = ["status = 'ok'", "embedding IS NOT NULL"]
+        params = []
+
+        if category:
+            where_clauses.append("category = ?")
+            params.append(category)
+        if date_from:
+            where_clauses.append("DATE(timestamp) >= ?")
+            params.append(date_from)
+        if date_to:
+            where_clauses.append("DATE(timestamp) <= ?")
+            params.append(date_to)
+
+        where = " AND ".join(where_clauses)
+        rows = conn.execute(
+            f"""
+            SELECT id, timestamp, app_name, category, summary, details,
+                   visible_text, bookmarked, embedding, ocr_text
+            FROM activities
+            WHERE {where}
+            ORDER BY timestamp DESC
+            LIMIT 500
+            """,
+            params,
+        ).fetchall()
+
+        for row in rows:
+            row_dict = dict(row)
+            emb = db._decode_embedding(row_dict.get("embedding"))
+            if emb:
+                row_dict.pop("embedding", None)
+                ocr_full = row_dict.pop("ocr_text", None) or ""
+                row_dict["ocr_snippet"] = ocr_full[:200] if ocr_full else ""
+                row_dict["screenshot_url"] = f"/api/screenshot/{row_dict['id']}"
+                activities_data.append(row_dict)
+                embeddings_list.append(emb)
 
     search_results = []
     seen_ids = set()
 
     # 1. Semantic search
-    if embeddings_list:
+    if embedder and embeddings_list:
         results = await asyncio.get_event_loop().run_in_executor(
             None, lambda: embedder.search(q, embeddings_list, top_k=limit)
         )

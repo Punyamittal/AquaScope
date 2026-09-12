@@ -6,6 +6,7 @@ Creates the FastAPI app, mounts static files, and includes all route modules.
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -23,10 +24,20 @@ logger = logging.getLogger("screenmind.api.server")
 class AuthMiddleware(BaseHTTPMiddleware):
     """PIN lock middleware — blocks API access if PIN is set and no valid session."""
 
-    OPEN_PATHS = {"/", "/api/auth/verify", "/api/auth/status", "/api/auth/setup-complete", "/api/status"}
-    OPEN_PREFIXES = ("/css/", "/js/", "/api/auth/")
+    OPEN_PATHS = {
+        "/",
+        "/api/auth/verify",
+        "/api/auth/status",
+        "/api/auth/setup-complete",
+        "/api/status",
+        "/api/aquascope/status",
+        "/api/aquascope/event",
+        "/api/aquascope/events",
+        "/api/settings",
+    }
+    OPEN_PREFIXES = ("/css/", "/js/", "/api/auth/", "/api/aquascope/")
     # Internal paths — only accessible from localhost (agents, MCP, SDK)
-    LOCALHOST_ONLY_PREFIXES = ("/api/agents/sdk/", "/api/timeline")
+    LOCALHOST_ONLY_PREFIXES = ("/api/agents/sdk/",)
     LOCALHOST_ONLY_PATHS = {"/api/capture/bookmark"}
 
     async def dispatch(self, request: Request, call_next):
@@ -40,7 +51,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if path in self.OPEN_PATHS or any(path.startswith(p) for p in self.OPEN_PREFIXES):
             return await call_next(request)
 
-        # Localhost-only paths — SDK, timeline, bookmark (agents/MCP use these internally)
+        # Localhost-only paths — SDK, bookmark (agents/MCP use these internally)
         if path in self.LOCALHOST_ONLY_PATHS or any(path.startswith(p) for p in self.LOCALHOST_ONLY_PREFIXES):
             client_host = request.client.host if request.client else None
             if client_host in ("127.0.0.1", "::1"):
@@ -61,6 +72,15 @@ def create_app(database: Database, capture_worker=None, analysis_worker=None, em
 
     app = FastAPI(title="ScreenMind", version="0.1.1")
 
+    # Add CORS middleware for mobile apps (AquaScope on LAN / emulator) and web frontends
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     # Add auth middleware
     app.add_middleware(AuthMiddleware)
 
@@ -70,7 +90,10 @@ def create_app(database: Database, capture_worker=None, analysis_worker=None, em
             embedder = Embedder()
             embedder._ensure_model()
         except Exception:
+            embedder = None
             logger.warning("Embedder unavailable — search will be limited")
+    elif embedder is False:
+        embedder = None
 
     # Initialize shared dependencies for all route modules
     deps.init(database, embedder, capture_worker, analysis_worker, audio_worker)
@@ -101,6 +124,7 @@ def create_app(database: Database, capture_worker=None, analysis_worker=None, em
     from screenmind.api.routes.models import router as models_router
     from screenmind.api.routes.data import router as data_router
     from screenmind.api.routes.memos import router as memos_router
+    from screenmind.api.routes.aquascope import router as aquascope_router
     app.include_router(auth_router)
     app.include_router(capture_router)
     app.include_router(timeline_router)
@@ -117,5 +141,6 @@ def create_app(database: Database, capture_worker=None, analysis_worker=None, em
     app.include_router(models_router)
     app.include_router(data_router)
     app.include_router(memos_router)
+    app.include_router(aquascope_router)
 
     return app

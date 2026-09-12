@@ -11,24 +11,49 @@ import java.util.Locale
 
 /**
  * Builds a strict grounded prompt: local model may only use FACTS from memory / rules.
- * Optionally injects Edge Gallery–style skill instructions.
+ * Supports multilingual directives (Hindi, Hinglish, Spanish, French, German),
+ * on-screen OCR grounding, and Edge Gallery skill injections.
  */
 object GroundedPromptBuilder {
 
     private val fmt = SimpleDateFormat("d MMM yyyy, h:mm a", Locale.US)
+
+    fun detectLanguage(question: String, selectedPref: String = "auto"): String {
+        if (selectedPref.isNotBlank() && selectedPref.lowercase() != "auto") {
+            return selectedPref.lowercase()
+        }
+        val q = question.lowercase(Locale.getDefault())
+        if (question.any { it in '\u0900'..'\u097F' }) return "hi"
+        val hinglishPattern = Regex("""\b(kya|hai|hain|yeh|ye|mujhe|batao|ho|raha|rahi|kab|shuru|nahi|pehle|aaj|kaun|kaise|pani|paani|kitna|gusal|rasoi|futa|badh|theek|sahi|saboot|praman|sunao|kuch)\b""")
+        if (hinglishPattern.containsMatchIn(q)) return "hinglish"
+        val spanishPattern = Regex("""\b(qu[eé]|est[aá]|fuga|agua|cu[aá]ndo|hoy|ayer|semana|por\s+qu[eé])\b""")
+        if (spanishPattern.containsMatchIn(q)) return "es"
+        val frenchPattern = Regex("""\b(fuite|eau|quand|aujourd'hui|hier|pourquoi|est-ce)\b""")
+        if (frenchPattern.containsMatchIn(q)) return "fr"
+        return "en"
+    }
 
     fun build(
         question: String,
         ruleAnswer: SmritiAnswer,
         events: List<PhysicalEvent>,
         skillMatch: SkillMatch? = null,
-        skillCatalogBlurb: String = ""
+        skillCatalogBlurb: String = "",
+        language: String = "auto"
     ): String {
-        val facts = factsBlock(ruleAnswer, events)
+        val target = detectLanguage(question, language)
+        val facts = factsBlock(ruleAnswer, events, target)
         val skills = skillSections(skillMatch, skillCatalogBlurb)
+        val (langRule, examples) = getLanguageDirectives(target)
+
         return """
-You are SMRITI, an on-device home memory assistant (screen OCR, Guardian, scans).
-Rewrite the CANONICAL_ANSWER in clear, calm spoken English for the user.
+You are SMRITI, an on-device home acoustic-memory assistant.
+Rewrite the FACTS below into a clear, natural, human response.
+
+TARGET LANGUAGE: $target
+$langRule
+
+$examples
 
 HARD RULES:
 - Use ONLY facts in CANONICAL_ANSWER, MEMORY_EVENTS, and SCREEN_OCR${if (skillMatch?.toolResult != null) " and SKILL_TOOL_RESULT" else ""}.
@@ -36,8 +61,8 @@ HARD RULES:
 - If EVIDENCE_STATE is UNKNOWN and SCREEN_OCR / MEMORY_EVENTS are empty, say you don't have that record.
 - Never say a leak is confirmed unless CANONICAL_ANSWER already says so.
 - When the user asks what was on screen / in a recording, answer from SCREEN_OCR and MEMORY_EVENTS text.
-- Keep under 160 words. Spoken sentences only.
-- Do not repeat labels such as EVIDENCE_STATE, CANONICAL_ANSWER, MEMORY_EVENTS, SCREEN_OCR, file paths, or RMS numbers.
+- Keep under 120 words. Plain conversational sentences. No markdown. No "Sure" or "Hello".
+- Do not repeat internal labels such as EVIDENCE_STATE, CANONICAL_ANSWER, MEMORY_EVENTS, SCREEN_OCR, file paths, or RMS numbers.
 - If ACTIVE_SKILL is present, follow its instructions when they do not conflict with the hard rules above.
 
 USER_QUESTION: $question
@@ -54,13 +79,16 @@ ANSWER:
         ruleAnswer: SmritiAnswer,
         events: List<PhysicalEvent>,
         skillMatch: SkillMatch? = null,
-        skillCatalogBlurb: String = ""
+        skillCatalogBlurb: String = "",
+        language: String = "auto"
     ): String {
-        val facts = factsBlock(ruleAnswer, events)
+        val target = detectLanguage(question, language)
+        val facts = factsBlock(ruleAnswer, events, target)
         val skills = skillSections(skillMatch, skillCatalogBlurb)
         val adventure = skillMatch?.skill?.id == "kitchen-adventure"
-        return if (adventure) {
-            """
+
+        if (adventure) {
+            return """
 You are running an Edge Gallery skill.
 
 $skills
@@ -71,10 +99,18 @@ Follow ACTIVE_SKILL instructions exactly. Keep replies short.
 
 ANSWER:
 """.trimIndent()
-        } else {
-            """
+        }
+
+        val (langRule, examples) = getLanguageDirectives(target)
+
+        return """
 You are SMRITI, an on-device home memory assistant.
 Answer USER_QUESTION using ONLY the facts below (CANONICAL_ANSWER + MEMORY_EVENTS + SCREEN_OCR${if (skillMatch?.toolResult != null) " + SKILL_TOOL_RESULT" else ""}).
+
+TARGET LANGUAGE: $target
+$langRule
+
+$examples
 
 HARD RULES:
 - Stay faithful to those facts. Do not invent events, leaks, times, places, or scores.
@@ -82,8 +118,8 @@ HARD RULES:
 - Do not answer from general knowledge or Wikipedia when SCREEN_OCR is present.
 - If facts are insufficient or EVIDENCE_STATE is UNKNOWN and there is no SCREEN_OCR / MEMORY text, say you don't have that in memory yet and suggest Capture → Stop or a more specific question — unless SKILL_TOOL_RESULT has the answer.
 - Never claim a confirmed leak unless CANONICAL_ANSWER already does.
-- Be concise (under 160 words). Spoken sentences only. No markdown. No "As an AI".
-- Do not repeat labels such as EVIDENCE_STATE, CANONICAL_ANSWER, MEMORY_EVENTS, SCREEN_OCR, file paths, or RMS numbers.
+- Be concise (under 120 words). Spoken sentences only. No markdown. No "As an AI".
+- Do not repeat internal labels such as EVIDENCE_STATE, CANONICAL_ANSWER, MEMORY_EVENTS, SCREEN_OCR, file paths, or RMS numbers.
 - If ACTIVE_SKILL is present, follow its instructions when they do not conflict with the hard rules above.
 
 USER_QUESTION: $question
@@ -93,7 +129,6 @@ $facts
 
 ANSWER:
 """.trimIndent()
-        }
     }
 
     private fun skillSections(skillMatch: SkillMatch?, catalogBlurb: String): String =
@@ -109,39 +144,112 @@ ANSWER:
             }
         }.trim()
 
-    private fun factsBlock(ruleAnswer: SmritiAnswer, events: List<PhysicalEvent>): String =
-        buildString {
-            // SCREEN_OCR first so truncation / attention keep the latest clip.
-            appendScreenOcr()
-            appendLine("EVIDENCE_STATE: ${ruleAnswer.evidenceState}")
-            appendLine("CANONICAL_ANSWER:")
-            appendLine(ruleAnswer.text.trim())
-            appendLine()
-            val screenFirst = events.sortedByDescending { e ->
-                when {
-                    e.id == "screen-ocr-latest" -> 3
-                    e.source.equals("SCREENMIND", true) ||
-                        e.source.equals("SMRITI_PLAY", true) ||
-                        e.source.equals("OCR", true) -> 2
-                    else -> 0
-                }
+    private fun getLanguageDirectives(target: String): Pair<String, String> {
+        return when (target) {
+            "hi" -> {
+                val rule = """
+LANGUAGE DIRECTIVE (HINDI):
+- You MUST answer COMPLETELY in natural, conversational Hindi using Devanagari script (हिन्दी).
+- Do NOT output English sentences.
+- Avoid robotic literal words; speak naturally like a helpful family assistant.
+- Do NOT copy names, numbers, or dates from the example. Use ONLY the data given in MEMORY_EVENTS.
+""".trimIndent()
+                val ex = """
+FEW-SHOT GUIDANCE (STYLE ONLY):
+प्रश्न: क्या किचन में कोई समस्या है?
+उत्तर: किचन में रात को 74% असामान्य ध्वनि स्तर देखा गया है। अभी कोई पक्का लीक नहीं है, लेकिन एक बार नल और पाइप की जांच ज़रूर कर लें।
+""".trimIndent()
+                Pair(rule, ex)
             }
-            appendLine("MEMORY_EVENTS (${screenFirst.size}):")
-            if (screenFirst.isEmpty()) {
-                appendLine("- (none)")
-            } else {
-                screenFirst.take(4).forEach { e ->
-                    appendLine(
-                        "- ${fmt.format(Date(e.timestampMs))} at ${e.locationLabel} [${e.source}]: " +
-                            eventFact(e)
-                    )
-                }
+            "hinglish" -> {
+                val rule = """
+LANGUAGE DIRECTIVE (HINGLISH):
+- You MUST answer COMPLETELY in conversational Hinglish (Hindi written using the English alphabet).
+- Do NOT answer in pure English. Speak like how Indians chat on WhatsApp.
+- Example phrasing: "record hui hai", "abnormal sound dekha gaya hai", "koi leak confirm nahi hua hai".
+- Do NOT copy names, numbers, or dates from the example. Use ONLY the data given in MEMORY_EVENTS.
+""".trimIndent()
+                val ex = """
+FEW-SHOT GUIDANCE (STYLE ONLY):
+Question: Kya kitchen me koi problem hai?
+Answer: Kitchen me raat ko 74% abnormal sound dekha gaya hai. Abhi koi pakka leak nahi hai, par ek baar tap aur pipe check kar lijiye.
+""".trimIndent()
+                Pair(rule, ex)
             }
-            if (ruleAnswer.suggestedActions.isNotEmpty()) {
-                appendLine()
-                appendLine("SUGGESTED_ACTIONS: ${ruleAnswer.suggestedActions.joinToString("; ")}")
+            "es" -> {
+                val rule = "- You MUST answer COMPLETELY in natural Spanish (Español)."
+                Pair(rule, "")
+            }
+            "fr" -> {
+                val rule = "- You MUST answer COMPLETELY in natural French (Français)."
+                Pair(rule, "")
+            }
+            "de" -> {
+                val rule = "- You MUST answer COMPLETELY in natural German (Deutsch)."
+                Pair(rule, "")
+            }
+            else -> {
+                val rule = "- Respond in clear, calm spoken English."
+                Pair(rule, "")
             }
         }
+    }
+
+    private fun factsBlock(
+        ruleAnswer: SmritiAnswer,
+        events: List<PhysicalEvent>,
+        target: String = "en"
+    ): String = buildString {
+        appendScreenOcr()
+
+        val stateTranslated = when (target) {
+            "hi" -> when (ruleAnswer.evidenceState.name) {
+                "OBSERVED" -> "OBSERVED (देखा गया / मिला है)"
+                "POSSIBLE" -> "POSSIBLE (संभावित / पक्का नहीं)"
+                "CONFIRMED" -> "CONFIRMED (पुष्ट / पक्का लीक)"
+                else -> "UNKNOWN (कोई रिकॉर्ड नहीं / अज्ञात)"
+            }
+            "hinglish" -> when (ruleAnswer.evidenceState.name) {
+                "OBSERVED" -> "OBSERVED (record mila hai)"
+                "POSSIBLE" -> "POSSIBLE (sambhavit hai, pakka nahi)"
+                "CONFIRMED" -> "CONFIRMED (confirmed leak)"
+                else -> "UNKNOWN (koi record nahi mila)"
+            }
+            else -> ruleAnswer.evidenceState.name
+        }
+
+        appendLine("EVIDENCE_STATE: $stateTranslated")
+        appendLine("CANONICAL_ANSWER:")
+        appendLine(ruleAnswer.text.trim())
+        appendLine()
+
+        val screenFirst = events.sortedByDescending { e ->
+            when {
+                e.id == "screen-ocr-latest" -> 3
+                e.source.equals("SCREENMIND", true) ||
+                    e.source.equals("SMRITI_PLAY", true) ||
+                    e.source.equals("OCR", true) -> 2
+                else -> 0
+            }
+        }
+
+        appendLine("MEMORY_EVENTS (${screenFirst.size}):")
+        if (screenFirst.isEmpty()) {
+            appendLine("- (none)")
+        } else {
+            screenFirst.take(6).forEach { e ->
+                appendLine(
+                    "- ${fmt.format(Date(e.timestampMs))} at ${e.locationLabel} [${e.source}]: " +
+                        eventFact(e)
+                )
+            }
+        }
+
+        if (ruleAnswer.suggestedActions.isNotEmpty()) {
+            appendLine()
+            appendLine("SUGGESTED_ACTIONS: ${ruleAnswer.suggestedActions.joinToString("; ")}")
+        }
+    }
 
     private fun StringBuilder.appendScreenOcr() {
         val ocr = NeuralCoreSession.lastScreenOcr.trim()
@@ -160,7 +268,6 @@ ANSWER:
     private fun eventFact(e: PhysicalEvent): String {
         val raw = e.summary.trim()
         val cleaned = AskAnswerCleaner.userFacingSummary(raw)
-        // Keep more of on-screen OCR / clip text for Qwen.
         val limit = when {
             e.source.equals("SMRITI_PLAY", true) ||
                 e.source.equals("SCREENMIND", true) ||

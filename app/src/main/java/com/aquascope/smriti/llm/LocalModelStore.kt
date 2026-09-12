@@ -88,7 +88,14 @@ class LocalModelStore(context: Context) {
                 isLoadableMediaPipe(file.name) &&
                 !isSpeechAsset(file.name)
         }
-        return files.firstOrNull { isPreferredTask(it.name) } ?: files.firstOrNull()
+        val installed = files.firstOrNull { isPreferredTask(it.name) } ?: files.firstOrNull()
+        if (installed != null) return installed
+
+        val inDownloads = runCatching { findInPublicDownloads() }.getOrNull()
+        if (inDownloads != null) {
+            return runCatching { importFromFile(inDownloads) }.getOrNull()
+        }
+        return null
     }
 
     /** Whisper / speech TFLite — never selected as the Ask LLM. */

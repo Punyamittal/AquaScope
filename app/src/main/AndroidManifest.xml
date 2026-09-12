@@ -29,7 +29,6 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AquaScope"
         android:name=".AquaScopeApp"
         android:usesCleartextTraffic="true"
@@ -65,7 +64,7 @@
         <activity android:name=".ui.LocalModelActivity" />
         <activity
             android:name=".ui.ScreenMindActivity"
-            android:exported="false"
+            android:exported="true"
             android:theme="@style/Theme.AquaScope" />
         <activity
             android:name=".smriti.brain.SmritiBrainActivity"
