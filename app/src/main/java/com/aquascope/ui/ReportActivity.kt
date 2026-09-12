@@ -5,12 +5,19 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.aquascope.R
 import com.aquascope.baseline.AnomalyThresholds
 import com.aquascope.databinding.ActivityReportBinding
+import com.aquascope.report.IndianComplianceGuidelines
 import com.aquascope.report.ReportGenerator
+import com.aquascope.report.ReportPdfExporter
 import com.aquascope.report.SessionReport
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -19,6 +26,7 @@ class ReportActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityReportBinding
     private lateinit var report: SessionReport
+    private var pdfFile: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,15 +49,22 @@ class ReportActivity : AppCompatActivity() {
         }
 
         bindReport(report)
-        binding.btnShareReport.setOnClickListener { shareReport() }
+        binding.btnDownloadPdf.setOnClickListener { downloadPdf(openAfter = true) }
+        binding.btnShareReport.setOnClickListener { sharePdfOrText() }
         binding.btnCloseReport.setOnClickListener { finish() }
+
+        // Generate the complete PDF as soon as the session report opens.
+        downloadPdf(openAfter = false, silent = true)
     }
 
     private fun bindReport(report: SessionReport) {
         val fmt = SimpleDateFormat("MMM d, yyyy · HH:mm", Locale.getDefault())
+        val band = IndianComplianceGuidelines.riskBand(report)
         binding.textReportLocation.text = report.locationLabel
         binding.textReportTime.text = fmt.format(Date(report.generatedAtMs))
-        binding.textAssessment.text = ReportGenerator.overallAssessment(report)
+        binding.textRiskBand.text = IndianComplianceGuidelines.riskTitle(band)
+        binding.textRiskBand.setTextColor(ContextCompat.getColor(this, colorForBand(band)))
+        binding.textAssessment.text = IndianComplianceGuidelines.executiveSummary(report)
         binding.textMaxScore.text = "${report.maxScore.toInt()}%"
         binding.textAvgScore.text = "${report.avgScore.toInt()}%"
         binding.textPointCount.text = report.points.size.toString()
@@ -80,6 +95,95 @@ class ReportActivity : AppCompatActivity() {
             stripe.setBackgroundColor(color)
             binding.layoutPointRows.addView(row)
         }
+
+        binding.layoutGuidelineRows.removeAllViews()
+        IndianComplianceGuidelines.actionGuidelines(report).forEachIndexed { index, guide ->
+            val tv = android.widget.TextView(this).apply {
+                text = "${index + 1}. $guide"
+                setTextColor(ContextCompat.getColor(this@ReportActivity, R.color.ink))
+                textSize = 13f
+                setLineSpacing(0f, 1.25f)
+                setPadding(0, 10, 0, 10)
+            }
+            binding.layoutGuidelineRows.addView(tv)
+        }
+    }
+
+    private fun downloadPdf(openAfter: Boolean, silent: Boolean = false) {
+        binding.btnDownloadPdf.isEnabled = false
+        if (!silent) {
+            binding.btnDownloadPdf.text = getString(R.string.report_pdf_generating)
+        }
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { ReportPdfExporter.export(this@ReportActivity, report) }
+            }
+            binding.btnDownloadPdf.isEnabled = true
+            binding.btnDownloadPdf.text = getString(R.string.report_download_pdf)
+            result.onSuccess { export ->
+                pdfFile = export.cacheFile
+                if (!silent) {
+                    val where = if (export.downloadsUri != null) {
+                        getString(R.string.report_pdf_saved_downloads, export.displayName)
+                    } else {
+                        getString(R.string.report_pdf_saved_app, export.displayName)
+                    }
+                    Toast.makeText(this@ReportActivity, where, Toast.LENGTH_LONG).show()
+                }
+                if (openAfter) {
+                    runCatching {
+                        startActivity(ReportPdfExporter.viewIntent(this@ReportActivity, export.cacheFile))
+                    }.onFailure {
+                        Toast.makeText(
+                            this@ReportActivity,
+                            R.string.report_pdf_no_viewer,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }.onFailure {
+                Toast.makeText(
+                    this@ReportActivity,
+                    getString(R.string.report_pdf_failed, it.message ?: "error"),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun sharePdfOrText() {
+        val existing = pdfFile
+        if (existing != null && existing.exists()) {
+            startActivity(
+                Intent.createChooser(
+                    ReportPdfExporter.shareIntent(this, existing, report),
+                    getString(R.string.share_report)
+                )
+            )
+            return
+        }
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { ReportPdfExporter.export(this@ReportActivity, report) }
+            }
+            result.onSuccess { export ->
+                pdfFile = export.cacheFile
+                startActivity(
+                    Intent.createChooser(
+                        ReportPdfExporter.shareIntent(this@ReportActivity, export.cacheFile, report),
+                        getString(R.string.share_report)
+                    )
+                )
+            }.onFailure {
+                // Fallback to plain text if PDF generation fails.
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "AquaScope report — ${report.locationLabel}")
+                    putExtra(Intent.EXTRA_TEXT, ReportGenerator.toShareText(report))
+                }
+                startActivity(Intent.createChooser(intent, getString(R.string.share_report)))
+            }
+        }
     }
 
     private fun colorForScore(score: Double): Int = when {
@@ -88,14 +192,10 @@ class ReportActivity : AppCompatActivity() {
         else -> R.color.status_alert
     }
 
-    private fun shareReport() {
-        val text = ReportGenerator.toShareText(report)
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "AquaScope report — ${report.locationLabel}")
-            putExtra(Intent.EXTRA_TEXT, text)
-        }
-        startActivity(Intent.createChooser(intent, getString(R.string.share_report)))
+    private fun colorForBand(band: IndianComplianceGuidelines.RiskBand): Int = when (band) {
+        IndianComplianceGuidelines.RiskBand.NORMAL -> R.color.status_ok
+        IndianComplianceGuidelines.RiskBand.ELEVATED -> R.color.status_warn
+        IndianComplianceGuidelines.RiskBand.ANOMALY -> R.color.status_alert
     }
 
     companion object {

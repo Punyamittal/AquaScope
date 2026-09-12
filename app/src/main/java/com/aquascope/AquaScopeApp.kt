@@ -3,6 +3,7 @@ package com.aquascope
 import android.app.Application
 import android.os.Build
 import android.util.Log
+import com.aquascope.baseline.UltrasonicModelWeights
 import com.aquascope.smriti.brain.OcrBackgroundProcessor
 import com.aquascope.smriti.brain.OcrGesturePreferences
 import com.aquascope.smriti.brain.OcrSwipeOverlayService
@@ -16,6 +17,7 @@ class AquaScopeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         unlockHiddenApis()
+        UltrasonicModelWeights.ensureLoaded(this)
         OcrBackgroundProcessor.install(this)
         runCatching { OcrSwipeOverlayService.stop(this) }
         val prefs = OcrGesturePreferences(this)

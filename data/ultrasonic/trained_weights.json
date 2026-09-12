@@ -1,0 +1,299 @@
+{
+  "featureKeys": [
+    "resonanceFreqHz",
+    "decayTimeMs",
+    "spectralCentroidHz",
+    "spectralSpreadHz",
+    "spectralFlatness"
+  ],
+  "featureWeights": [
+    1.5,
+    2.6138,
+    2.0269,
+    0.3959,
+    1.2
+  ],
+  "featureScales": [
+    3294.5147,
+    20.0,
+    1818.0362,
+    600.0,
+    0.175
+  ],
+  "dryRef": 0.35,
+  "moistRef": 0.75,
+  "dryPercentile": 0.75,
+  "moistPercentile": 0.3,
+  "distanceBlend": 0.0,
+  "useMedian": true,
+  "scoring": "lda_clean_v3",
+  "metrics": {
+    "before_loo": {
+      "dry_class_rate": 0.4483,
+      "moist_class_rate": 0.5472,
+      "balanced_acc": 0.4977,
+      "dry_mean_score": 49.9132,
+      "moist_mean_score": 51.8421,
+      "dry_n": 116,
+      "moist_n": 159,
+      "dry_ref": 0.35,
+      "moist_ref": 0.75,
+      "loo": true
+    },
+    "after": {
+      "dry_class_rate": 0.7414,
+      "moist_class_rate": 0.6415,
+      "balanced_acc": 0.6914,
+      "dry_mean_score": 34.4002,
+      "moist_mean_score": 58.4756,
+      "dry_n": 116,
+      "moist_n": 159,
+      "dry_ref": 0.35,
+      "moist_ref": 0.75,
+      "loo": false,
+      "chosen": "lda_clean_search",
+      "loo_balanced_acc": 0.5773,
+      "loo_dry_class_rate": 0.5948,
+      "loo_moist_class_rate": 0.5597,
+      "useMedian": true,
+      "distanceBlend": 0.0,
+      "dryPercentile": 0.75,
+      "moistPercentile": 0.3
+    }
+  },
+  "dataset": {
+    "locations": 32,
+    "dry": 144,
+    "moist": 159,
+    "history": 313,
+    "paired_locations": 20,
+    "by_location": [
+      {
+        "label": "tabpe",
+        "dry": 2,
+        "moist": 0,
+        "history": 5,
+        "paired": false
+      },
+      {
+        "label": "table",
+        "dry": 1,
+        "moist": 1,
+        "history": 3,
+        "paired": true
+      },
+      {
+        "label": "moisture",
+        "dry": 4,
+        "moist": 0,
+        "history": 6,
+        "paired": false
+      },
+      {
+        "label": "m2",
+        "dry": 8,
+        "moist": 0,
+        "history": 16,
+        "paired": false
+      },
+      {
+        "label": "m3",
+        "dry": 10,
+        "moist": 0,
+        "history": 24,
+        "paired": false
+      },
+      {
+        "label": "m5",
+        "dry": 3,
+        "moist": 0,
+        "history": 4,
+        "paired": false
+      },
+      {
+        "label": "new",
+        "dry": 1,
+        "moist": 0,
+        "history": 1,
+        "paired": false
+      },
+      {
+        "label": "new1",
+        "dry": 12,
+        "moist": 26,
+        "history": 37,
+        "paired": true
+      },
+      {
+        "label": "paper",
+        "dry": 0,
+        "moist": 0,
+        "history": 0,
+        "paired": false
+      },
+      {
+        "label": "paper1",
+        "dry": 2,
+        "moist": 3,
+        "history": 4,
+        "paired": true
+      },
+      {
+        "label": "iqoo hq",
+        "dry": 2,
+        "moist": 6,
+        "history": 7,
+        "paired": true
+      },
+      {
+        "label": ".",
+        "dry": 1,
+        "moist": 3,
+        "history": 3,
+        "paired": true
+      },
+      {
+        "label": ".",
+        "dry": 1,
+        "moist": 2,
+        "history": 2,
+        "paired": true
+      },
+      {
+        "label": "h",
+        "dry": 1,
+        "moist": 2,
+        "history": 2,
+        "paired": true
+      },
+      {
+        "label": "iqoo hq",
+        "dry": 1,
+        "moist": 2,
+        "history": 2,
+        "paired": true
+      },
+      {
+        "label": "m",
+        "dry": 0,
+        "moist": 0,
+        "history": 0,
+        "paired": false
+      },
+      {
+        "label": "kitchen",
+        "dry": 0,
+        "moist": 0,
+        "history": 0,
+        "paired": false
+      },
+      {
+        "label": "kit",
+        "dry": 2,
+        "moist": 3,
+        "history": 4,
+        "paired": true
+      },
+      {
+        "label": "ki",
+        "dry": 0,
+        "moist": 0,
+        "history": 0,
+        "paired": false
+      },
+      {
+        "label": "k",
+        "dry": 4,
+        "moist": 6,
+        "history": 9,
+        "paired": true
+      },
+      {
+        "label": "p",
+        "dry": 9,
+        "moist": 24,
+        "history": 32,
+        "paired": true
+      },
+      {
+        "label": "y",
+        "dry": 0,
+        "moist": 0,
+        "history": 0,
+        "paired": false
+      },
+      {
+        "label": "u",
+        "dry": 19,
+        "moist": 16,
+        "history": 34,
+        "paired": true
+      },
+      {
+        "label": "i",
+        "dry": 9,
+        "moist": 9,
+        "history": 17,
+        "paired": true
+      },
+      {
+        "label": "y",
+        "dry": 6,
+        "moist": 4,
+        "history": 9,
+        "paired": true
+      },
+      {
+        "label": "ui",
+        "dry": 6,
+        "moist": 11,
+        "history": 16,
+        "paired": true
+      },
+      {
+        "label": ".",
+        "dry": 4,
+        "moist": 7,
+        "history": 10,
+        "paired": true
+      },
+      {
+        "label": "b",
+        "dry": 0,
+        "moist": 0,
+        "history": 0,
+        "paired": false
+      },
+      {
+        "label": "y",
+        "dry": 7,
+        "moist": 7,
+        "history": 13,
+        "paired": true
+      },
+      {
+        "label": "h",
+        "dry": 18,
+        "moist": 21,
+        "history": 38,
+        "paired": true
+      },
+      {
+        "label": "h",
+        "dry": 1,
+        "moist": 2,
+        "history": 2,
+        "paired": true
+      },
+      {
+        "label": "uy",
+        "dry": 10,
+        "moist": 4,
+        "history": 13,
+        "paired": true
+      }
+    ],
+    "train_mode": "lda_clean_v3"
+  },
+  "source": "data/ultrasonic/locations.json"
+}

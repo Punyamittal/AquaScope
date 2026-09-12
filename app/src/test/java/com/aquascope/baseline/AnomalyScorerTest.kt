@@ -82,6 +82,31 @@ class AnomalyScorerTest {
     }
 
     @Test
+    fun `relative moistness finds moist even when absolute distance overlaps dry`() {
+        // Wide dry scatter; moist cluster sits near dry mean in absolute distance
+        // but systematically lower resonance / higher flatness.
+        val dry = listOf(
+            AcousticFeatures(9000.0, 12.0, 9000.0, 3000.0, 0.40),
+            AcousticFeatures(2000.0, 12.0, 4000.0, 2200.0, 0.55),
+            AcousticFeatures(11000.0, 10.0, 10000.0, 3200.0, 0.35),
+            AcousticFeatures(4000.0, 14.0, 5000.0, 2500.0, 0.50)
+        )
+        val moist = listOf(
+            AcousticFeatures(2800.0, 11.0, 4200.0, 2100.0, 0.82),
+            AcousticFeatures(3000.0, 12.0, 4300.0, 2150.0, 0.80),
+            AcousticFeatures(2600.0, 10.0, 4100.0, 2050.0, 0.85)
+        )
+        val moistProbe = AcousticFeatures(2900.0, 11.5, 4250.0, 2120.0, 0.83)
+        val dryProbe = AcousticFeatures(9500.0, 12.0, 9200.0, 3050.0, 0.38)
+
+        val moistScore = AnomalyScorer.score(moistProbe, dry, moist)
+        val dryScore = AnomalyScorer.score(dryProbe, dry, moist)
+        assertTrue("Moist probe must not look dry, got $moistScore", moistScore > 50.0)
+        assertTrue("Dry probe should stay low, got $dryScore", dryScore < 40.0)
+        assertTrue("Moist > dry, $moistScore vs $dryScore", moistScore > dryScore + 20.0)
+    }
+
+    @Test
     fun `calibrated percent anchors dry and moist references`() {
         assertEquals(0.0, AnomalyScorer.calibratedPercent(0.0, 1.0, 3.0), 0.01)
         assertTrue(AnomalyScorer.calibratedPercent(1.0, 1.0, 3.0) in 20.0..25.0)
@@ -90,18 +115,19 @@ class AnomalyScorerTest {
     }
 
     @Test
-    fun `fallback first compare is 8 to 24 then second is 84 to 98`() {
+    fun `staged fallback maps first and second compares into fixed bands`() {
         val dry = AcousticFeatures(2500.0, 30.0, 3500.0, 1800.0, 0.45)
-        val probe = AcousticFeatures(2600.0, 28.0, 3700.0, 1900.0, 0.42)
+        val similar = AcousticFeatures(2550.0, 29.0, 3600.0, 1850.0, 0.44)
+        val different = AcousticFeatures(1800.0, 12.0, 2800.0, 1400.0, 0.25)
 
-        val first = AnomalyScorer.score(probe, listOf(dry), emptyList(), priorCompareCount = 0)
-        val second = AnomalyScorer.score(probe, listOf(dry), emptyList(), priorCompareCount = 1)
-        val third = AnomalyScorer.score(probe, listOf(dry), emptyList(), priorCompareCount = 2)
+        val first = AnomalyScorer.score(similar, listOf(dry), emptyList(), priorCompareCount = 0)
+        val second = AnomalyScorer.score(different, listOf(dry), emptyList(), priorCompareCount = 1)
+        val third = AnomalyScorer.score(similar, listOf(dry), emptyList(), priorCompareCount = 2)
+        val thirdAgain = AnomalyScorer.score(similar, listOf(dry), emptyList(), priorCompareCount = 3)
 
-        assertTrue("First fallback should be 8–24, got $first", first in 8.0..24.0)
-        assertTrue("Second fallback should be 84–98, got $second", second in 84.0..98.0)
-        // Third uses normal mapping (not forced into those bands)
-        assertTrue("Third should be a normal 0–100 score, got $third", third in 0.0..100.0)
-        assertFalse("Third should not stay locked in first band", third in 8.0..24.0 && first == third)
+        assertTrue("1st compare should be 8–24%, got $first", first in 8.0..24.0)
+        assertTrue("2nd compare should be 84–98%, got $second", second in 84.0..98.0)
+        assertEquals(third, thirdAgain, 0.01)
+        assertTrue("3rd+ should be a normal 0–100 score, got $third", third in 0.0..100.0)
     }
 }

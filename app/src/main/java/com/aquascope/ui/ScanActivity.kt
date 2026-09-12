@@ -199,15 +199,23 @@ class ScanActivity : AppCompatActivity() {
                 } else {
                     val dry = location.baselineFeatures.map { it.toAcousticFeatures() }
                     val moist = location.moistFeatures.map { it.toAcousticFeatures() }
-                    val stage = location.scoreStage.coerceAtLeast(0)
+                    val (dryClean, moistClean) = AnomalyScorer.prepareTeaching(dry, moist)
+                    if (dryClean.size != dry.size || moistClean.size != moist.size) {
+                        location.baselineFeatures.clear()
+                        location.baselineFeatures.addAll(dryClean.map { SerializableFeatures.from(it) })
+                        location.moistFeatures.clear()
+                        location.moistFeatures.addAll(moistClean.map { SerializableFeatures.from(it) })
+                    }
                     val score = AnomalyScorer.score(
                         scan = features,
-                        drySamples = dry,
-                        moistSamples = moist,
-                        priorCompareCount = stage
+                        drySamples = location.baselineFeatures.map { it.toAcousticFeatures() },
+                        moistSamples = location.moistFeatures.map { it.toAcousticFeatures() },
+                        priorCompareCount = location.scoreStage
                     )
+                    if (location.scoreStage < 2) {
+                        location.scoreStage += 1
+                    }
 
-                    location.scoreStage = stage + 1
                     location.scanHistory.add(
                         ScanRecord(
                             features = SerializableFeatures.from(features),
@@ -245,11 +253,10 @@ class ScanActivity : AppCompatActivity() {
                     binding.textScanMeta.text = buildString {
                         append(scanMeta(mem))
                         append("\nLearning    ${dry.size} dry · ${moist.size} moist")
-                        when (stage) {
-                            0 -> append("\nStage    1st compare fallback (8–24%)")
-                            1 -> append("\nStage    2nd compare fallback (84–98%)")
-                            else -> append("\nStage    normal scoring")
-                        }
+                        append(
+                            if (moist.isNotEmpty()) "\nScoring    dry→moist projection"
+                            else "\nScoring    distance vs dry baseline"
+                        )
                         append("\nTeach: dry → baseline, moist → detector (or leave unmarked = moist)")
                     }
                     mem.deviationVsYesterday?.let { delta ->
@@ -266,17 +273,9 @@ class ScanActivity : AppCompatActivity() {
                         teachMoist(features)
                     }
                     binding.btnViewReport.visibility = View.VISIBLE
-                    binding.btnViewReport.text = getString(R.string.view_memory)
+                    binding.btnViewReport.text = getString(R.string.complete_report)
                     binding.btnViewReport.setOnClickListener {
-                        val eid = lastSmritiEventId
-                        if (eid != null) {
-                            startActivity(
-                                Intent(this@ScanActivity, MemoryDetailActivity::class.java)
-                                    .putExtra("event_id", eid)
-                            )
-                        } else {
-                            openSessionReport()
-                        }
+                        openSessionReport()
                     }
                     binding.btnViewEvidence.visibility = View.VISIBLE
                     updateMultiPointCards()
@@ -325,9 +324,26 @@ class ScanActivity : AppCompatActivity() {
 
     private fun teachDry(features: AcousticFeatures, firstBaseline: Boolean) {
         val location = repo.getLocation(locationId) ?: return
+        val dry = location.baselineFeatures.map { it.toAcousticFeatures() }
+        val moist = location.moistFeatures.map { it.toAcousticFeatures() }
+        if (moist.isNotEmpty() && dry.isNotEmpty()) {
+            val (dClean, _) = AnomalyScorer.prepareTeaching(dry + features, moist)
+            if (dClean.none { it === features || near(it, features) }) {
+                // Rejected as closer to moist than dry
+                Toast.makeText(
+                    this,
+                    "Looks moist vs your teaching — mark Moist instead, or scan a clearer dry spot",
+                    Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+        }
         location.baselineFeatures.add(SerializableFeatures.from(features))
         // If this was previously taught as moist, remove the closest duplicate.
         removeSimilar(location.moistFeatures, features)
+        while (location.baselineFeatures.size > 40) {
+            location.baselineFeatures.removeAt(0)
+        }
         repo.updateLocation(location)
         pendingTeach = null
         pendingLabeled = true
@@ -361,7 +377,22 @@ class ScanActivity : AppCompatActivity() {
 
     private fun teachMoist(features: AcousticFeatures) {
         val location = repo.getLocation(locationId) ?: return
+        val dry = location.baselineFeatures.map { it.toAcousticFeatures() }
+        val moist = location.moistFeatures.map { it.toAcousticFeatures() }
+        if (dry.isNotEmpty()) {
+            val probeDry = if (dry.isNotEmpty()) dry else listOf(features)
+            val (_, mClean) = AnomalyScorer.prepareTeaching(probeDry, moist + features)
+            if (mClean.none { near(it, features) }) {
+                Toast.makeText(
+                    this,
+                    "Looks dry vs your teaching — mark Dry instead, or scan a clearer moist spot",
+                    Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+        }
         location.moistFeatures.add(SerializableFeatures.from(features))
+        removeSimilar(location.baselineFeatures, features)
         // Cap teaching set so one location does not grow forever
         while (location.moistFeatures.size > 40) {
             location.moistFeatures.removeAt(0)
@@ -374,6 +405,17 @@ class ScanActivity : AppCompatActivity() {
         binding.textScoreLabel.text =
             "Moist sample taught · ${location.baselineFeatures.size} dry · ${location.moistFeatures.size} moist"
         Toast.makeText(this, "Moist · detector updated", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun near(a: AcousticFeatures, b: AcousticFeatures): Boolean {
+        val x = a.toDoubleArray()
+        val y = b.toDoubleArray()
+        var sum = 0.0
+        for (i in x.indices) {
+            val d = x[i] - y[i]
+            sum += d * d
+        }
+        return sqrt(sum) < 1.0
     }
 
     /** User said unmarked compare scans are moist — learn that on next action / pause. */

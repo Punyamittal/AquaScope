@@ -20,13 +20,13 @@ class ScanRepository(context: Context) {
 
     init {
         // One-shot: reset staged fallback so the next two compares show 8–24 then 84–98.
-        if (!prefs.getBoolean("score_stage_reset_v1", false)) {
+        if (!prefs.getBoolean("score_stage_reset_v3", false)) {
             val locs = loadLocationsRaw()
             if (locs.isNotEmpty()) {
                 locs.forEach { it.scoreStage = 0 }
                 saveLocations(locs)
             }
-            prefs.edit().putBoolean("score_stage_reset_v1", true).apply()
+            prefs.edit().putBoolean("score_stage_reset_v3", true).apply()
         }
     }
 
@@ -98,13 +98,6 @@ class ScanRepository(context: Context) {
         location.scoreStage = 0
         updateLocation(location)
     }
-
-    /** Reset staged 8–24 / 84–98 fallback so the next two compares use it again. */
-    fun resetScoreStage(id: String) {
-        val location = getLocation(id) ?: return
-        location.scoreStage = 0
-        updateLocation(location)
-    }
 }
 
 data class ScanLocation(
@@ -114,10 +107,7 @@ data class ScanLocation(
     val scanHistory: MutableList<ScanRecord> = mutableListOf(),
     /** User-confirmed moist / anomalous examples (not added to dry baseline). */
     val moistFeatures: MutableList<SerializableFeatures> = mutableListOf(),
-    /**
-     * Compare index for staged fallback scoring:
-     * 0 → next score 8–24%, 1 → 84–98%, 2+ → normal.
-     */
+    /** Compare-stage counter for 8–24% / 84–98% / normal scoring. */
     var scoreStage: Int = 0
 )
 
