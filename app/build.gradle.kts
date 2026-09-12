@@ -83,12 +83,15 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     // Unlock ServiceManager.getService so Monster Halo binder is reachable on Android 9+
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:4.3")
     // Optional on-device LLM (Gemma via MediaPipe). App runs without a model file.
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    // Gemma 4 LiteRT-LM needs Kotlin 2.x — download stores .litertlm for now; Ask uses MediaPipe .task.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")

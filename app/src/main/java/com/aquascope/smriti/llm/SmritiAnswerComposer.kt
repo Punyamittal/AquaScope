@@ -3,9 +3,11 @@ package com.aquascope.smriti.llm
 import com.aquascope.smriti.model.EvidenceState
 import com.aquascope.smriti.model.QueryIntent
 import com.aquascope.smriti.model.SmritiAnswer
+import com.aquascope.smriti.skills.SkillMatch
 
 /**
  * Rules are the source of truth. Local LLM rephrases or answers free-form from grounded facts.
+ * Edge Gallery–style skills may inject instructions / tool results.
  */
 class SmritiAnswerComposer(
     private val llm: LocalLlmEngine?,
@@ -15,36 +17,103 @@ class SmritiAnswerComposer(
     fun compose(
         question: String,
         ruleAnswer: SmritiAnswer,
-        intent: QueryIntent = QueryIntent.GENERAL
+        intent: QueryIntent = QueryIntent.GENERAL,
+        skillMatch: SkillMatch? = null,
+        skillCatalogBlurb: String = ""
     ): SmritiAnswer {
-        if (!prefs.enabled || llm == null || !llm.isReady) {
-            return ruleAnswer.copy(usedLocalModel = false, modelName = null)
+        val cleanedRule = ruleAnswer.copy(
+            text = AskAnswerCleaner.cleanForDisplay(ruleAnswer.text)
+        )
+
+        // Tool-only skills can answer without a model (hash / email / wikipedia).
+        if (skillMatch != null &&
+            !skillMatch.toolResult.isNullOrBlank() &&
+            (llm == null || !llm.isReady || !prefs.enabled)
+        ) {
+            return cleanedRule.copy(
+                text = AskAnswerCleaner.cleanForDisplay(skillMatch.toolResult!!),
+                usedLocalModel = false,
+                modelName = "skill:${skillMatch.skill.name}"
+            )
         }
 
-        val prompt = if (intent == QueryIntent.GENERAL) {
-            GroundedPromptBuilder.buildChat(question, ruleAnswer, ruleAnswer.relatedEvents)
+        if (!prefs.enabled || llm == null || !llm.isReady) {
+            return cleanedRule.copy(usedLocalModel = false, modelName = null)
+        }
+
+        val prompt = if (intent == QueryIntent.GENERAL || skillMatch?.skill?.id == "kitchen-adventure") {
+            GroundedPromptBuilder.buildChat(
+                question, cleanedRule, cleanedRule.relatedEvents, skillMatch, skillCatalogBlurb
+            )
         } else {
-            GroundedPromptBuilder.build(question, ruleAnswer, ruleAnswer.relatedEvents)
+            GroundedPromptBuilder.build(
+                question, cleanedRule, cleanedRule.relatedEvents, skillMatch, skillCatalogBlurb
+            )
         }
 
         val polished = try {
             llm.generate(prompt)
         } catch (t: Throwable) {
             null
-        } ?: return ruleAnswer.copy(usedLocalModel = false, modelName = null)
-
-        if (!passesGroundingCheck(polished, ruleAnswer, intent)) {
-            return ruleAnswer.copy(usedLocalModel = false, modelName = null)
+        } ?: return if (!skillMatch?.toolResult.isNullOrBlank()) {
+            cleanedRule.copy(
+                text = AskAnswerCleaner.cleanForDisplay(skillMatch!!.toolResult!!),
+                usedLocalModel = false,
+                modelName = "skill:${skillMatch.skill.name}"
+            )
+        } else {
+            cleanedRule.copy(usedLocalModel = false, modelName = null)
         }
 
-        return ruleAnswer.copy(
-            text = polished,
+        val cleaned = AskAnswerCleaner.cleanModelOutput(polished)
+        val relaxGrounding = skillMatch?.skill?.id == "kitchen-adventure" ||
+            skillMatch?.skill?.tool != null ||
+            intent == QueryIntent.GENERAL ||
+            looksLikeScreenOrMemoryQa(question, cleanedRule)
+
+        if (cleaned.isBlank() || AskAnswerCleaner.looksLikePromptLeak(cleaned)) {
+            return if (!skillMatch?.toolResult.isNullOrBlank()) {
+                cleanedRule.copy(
+                    text = AskAnswerCleaner.cleanForDisplay(skillMatch!!.toolResult!!),
+                    usedLocalModel = false,
+                    modelName = "skill:${skillMatch.skill.name}"
+                )
+            } else {
+                cleanedRule.copy(usedLocalModel = false, modelName = null)
+            }
+        }
+
+        if (!relaxGrounding && !passesGroundingCheck(cleaned, cleanedRule, intent)) {
+            return cleanedRule.copy(usedLocalModel = false, modelName = null)
+        }
+
+        // Soft leak check still applies for relaxed GENERAL / screen Q&A.
+        if (relaxGrounding && !passesGroundingCheck(cleaned, cleanedRule, QueryIntent.GENERAL)) {
+            return cleanedRule.copy(usedLocalModel = false, modelName = null)
+        }
+
+        return cleanedRule.copy(
+            text = cleaned,
             usedLocalModel = true,
             modelName = llm.modelLabel
         )
     }
 
     companion object {
+        private fun looksLikeScreenOrMemoryQa(question: String, ruleAnswer: SmritiAnswer): Boolean {
+            val q = question.lowercase()
+            if (q.contains("screen") || q.contains("clip") || q.contains("recording") ||
+                q.contains("ocr") || q.contains("what was") || q.contains("what did")
+            ) {
+                return true
+            }
+            return ruleAnswer.relatedEvents.any {
+                it.source.equals("SMRITI_PLAY", true) ||
+                    it.source.equals("NEURAL_CORE", true) ||
+                    it.summary.contains("Seen on screen", ignoreCase = true)
+            }
+        }
+
         /**
          * Soft guard: reject answers that assert confirmation when evidence is weaker,
          * or invent "confirmed leak" language the rules never used.
@@ -56,17 +125,17 @@ class SmritiAnswerComposer(
         ): Boolean {
             val t = modelText.lowercase()
             if (t.isBlank()) return false
-            val rule = ruleAnswer.text.lowercase()
+            if (AskAnswerCleaner.looksLikePromptLeak(modelText)) return false
 
             val modelClaimsConfirmedLeak = positiveLeakClaim(t)
             val rulesAllowConfirmed =
                 ruleAnswer.evidenceState == EvidenceState.CONFIRMED ||
-                    positiveLeakClaim(rule)
+                    positiveLeakClaim(ruleAnswer.text.lowercase())
 
             if (modelClaimsConfirmedLeak && !rulesAllowConfirmed) return false
 
             val maxLen = if (intent == QueryIntent.GENERAL) {
-                900
+                1_200
             } else {
                 maxOf(ruleAnswer.text.length * 5 + 280, 720)
             }

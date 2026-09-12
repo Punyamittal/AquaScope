@@ -95,7 +95,21 @@ class SmritiMemoryEngine(context: Context) {
                 .format(java.util.Date(top.timestampMs))
             RecallResult(
                 found = true,
-                message = "Recorded $whenText — ${top.title}",
+                message = buildString {
+                    append("Recorded $whenText — ${top.title}")
+                    val body = top.body.trim()
+                    if (body.isNotBlank()) {
+                        val detail = body
+                            .removePrefix(top.title)
+                            .trim()
+                            .ifBlank { body }
+                        append("\n\n")
+                        append(detail.take(600))
+                    }
+                    if (!top.evidencePath.isNullOrBlank()) {
+                        append("\n\n(Clip saved — open the Play row to watch)")
+                    }
+                },
                 matches = ranked
             )
         }

@@ -159,7 +159,7 @@ class MediaPipeLocalLlm(
         private const val TAG = "SmritiLocalLlm"
 
         fun tryCreate(context: Context, store: LocalModelStore): MediaPipeLocalLlm? {
-            val file = store.findInstalled() ?: return null
+            val file = store.findInstalledMediaPipe() ?: return null
             val llm = MediaPipeLocalLlm(context.applicationContext, file)
             llm.warmUp()
             return llm

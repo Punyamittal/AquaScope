@@ -1,5 +1,6 @@
 package com.aquascope.smriti.engine
 
+import com.aquascope.smriti.llm.AskAnswerCleaner
 import com.aquascope.smriti.model.EvidenceState
 import com.aquascope.smriti.model.EventType
 import com.aquascope.smriti.model.MemoryQuery
@@ -145,7 +146,8 @@ class ReasoningEngine(
             return none("I don't have records of activity today yet.")
         }
         val lines = events.take(6).joinToString("\n") {
-            "• ${fmt.format(Date(it.timestampMs))} — ${it.locationLabel}: ${it.eventType} (${it.anomalyScore.toInt()}%)"
+            "• ${fmt.format(Date(it.timestampMs))} at ${it.locationLabel}: " +
+                AskAnswerCleaner.userFacingSummary(it.summary)
         }
         return SmritiAnswer(
             text = "Observed today (${events.size} memories):\n$lines",
@@ -185,7 +187,7 @@ class ReasoningEngine(
             ?: return none("No records available to show as evidence.")
         val bundle = evidenceEngine.forEvent(focus)
         return SmritiAnswer(
-            text = "${bundle.claim}\n\nEvidence state: ${bundle.evidenceState}.",
+            text = AskAnswerCleaner.userFacingSummary(bundle.claim),
             evidenceState = bundle.evidenceState,
             relatedEvents = listOf(focus),
             evidence = bundle,
@@ -216,26 +218,57 @@ class ReasoningEngine(
 
     private fun answerGeneral(query: MemoryQuery, events: List<PhysicalEvent>): SmritiAnswer {
         val q = query.raw.lowercase(Locale.getDefault())
+        val guardianQ = q.contains("guardian") || q.contains("ir") || q.contains("blaster") ||
+            q.contains("kitchen alert") || q.contains("smoke") || q.contains("glass break")
+        val screenQ = query.locationHint == "screen" ||
+            q.contains("screen") || q.contains("clip") || q.contains("recording") ||
+            q.contains("on screen") || q.contains("ocr")
         if (events.isEmpty()) {
             return none(
-                "I don't have a record matching “${query.raw.trim()}” yet. " +
-                    "Run a scan or ask about a location I already remember."
+                when {
+                    guardianQ ->
+                        "I don't have Guardian / IR memories yet. Turn on Guardian in Neural Core, " +
+                            "optionally arm IR, and leave the phone listening."
+                    screenQ ->
+                        "I don't have a screen recording in memory yet. Tap Capture, wait a few seconds, " +
+                            "then tap Stop so OCR can be saved — then ask again."
+                    else ->
+                        "I don't have a record matching “${query.raw.trim()}” yet. " +
+                            "Run a scan or ask about a location I already remember."
+                }
             )
         }
         val preview = events.take(6).joinToString("\n") {
-            "• ${fmt.format(Date(it.timestampMs))} — ${it.locationLabel}: ${it.summary}"
+            "• ${fmt.format(Date(it.timestampMs))} at ${it.locationLabel}: " +
+                AskAnswerCleaner.userFacingSummary(it.summary)
         }
         val prefix = when {
-            q.contains("guardian") || q.contains("ir") || q.contains("blaster") ->
-                "From Guardian / IR records: "
+            guardianQ ->
+                "Guardian listens for ambient sounds and can request an IR pulse when evidence supports it. " +
+                    "Here is what memory has:\n"
+            screenQ ->
+                "From your recent screen recording / OCR, here is what memory has:\n"
             else -> "About “${query.raw.trim()}”, here is what memory has (${events.size} related):\n"
         }
+        val actions = when {
+            guardianQ -> listOf(
+                "Ask: what did Guardian hear?",
+                "Arm IR on Neural Core if you want appliance toggles",
+                "Ask: did IR fire?"
+            )
+            screenQ -> listOf(
+                "Ask: what was on my screen?",
+                "Ask: what text did you read from the recording?",
+                "Capture → Stop again to refresh OCR"
+            )
+            else -> listOf("Ask: Has this happened before?", "Ask: Is it definitely a leak?")
+        }
         return SmritiAnswer(
-            text = prefix + if (prefix.startsWith("From")) "\n$preview" else preview,
+            text = prefix + preview,
             evidenceState = EvidenceState.OBSERVED,
             relatedEvents = events.take(6),
             evidence = evidenceEngine.forEvents(events.take(6), "Retrieved memories", EvidenceState.OBSERVED),
-            suggestedActions = listOf("Ask: Has this happened before?", "Ask: Is it definitely a leak?")
+            suggestedActions = actions
         )
     }
 

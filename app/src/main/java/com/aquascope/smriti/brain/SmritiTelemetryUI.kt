@@ -1,8 +1,11 @@
 package com.aquascope.smriti.brain
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,8 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -85,6 +86,7 @@ fun SmritiTelemetryUI(
     onManualClip: () -> Unit,
     onOcr: () -> Unit,
     onIngestNote: () -> Unit,
+    onOpenEvidence: (String) -> Unit = {},
     onClose: () -> Unit
 ) {
     val focus = LocalFocusManager.current
@@ -134,6 +136,7 @@ fun SmritiTelemetryUI(
                     Panel
                 )
                 .padding(18.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             Text(
                 orbCaption(state.orb).uppercase(Locale.getDefault()),
@@ -164,10 +167,9 @@ fun SmritiTelemetryUI(
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(top = 18.dp, bottom = 8.dp)
                 )
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(state.timeline.take(6), key = { it.id }) { ep ->
-                        MemoryRow(ep)
-                    }
+                state.timeline.take(6).forEach { ep ->
+                    MemoryRow(ep, onOpenEvidence)
+                    Spacer(Modifier.padding(bottom = 8.dp))
                 }
             }
         }
@@ -206,7 +208,16 @@ fun SmritiTelemetryUI(
                 Modifier.weight(1f)
             ) { if (state.playArmed) onDisarmPlay() else onArmPlay() }
             SecondaryAction("Clip", Modifier.weight(1f), onManualClip)
-            SecondaryAction("OCR", Modifier.weight(1f), onOcr)
+            Button(
+                onClick = onOcr,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Ocean,
+                    contentColor = Ink
+                ),
+                elevation = ButtonDefaults.buttonElevation(0.dp)
+            ) { Text("OCR", fontSize = 13.sp) }
             SecondaryAction("Save", Modifier.weight(1f), onIngestNote)
         }
 
@@ -291,7 +302,7 @@ private fun QuietWave(amp: Float) {
 }
 
 @Composable
-private fun MemoryRow(ep: EpisodeRecord) {
+private fun MemoryRow(ep: EpisodeRecord, onOpenEvidence: (String) -> Unit) {
     val whenText = SimpleDateFormat("d MMM · HH:mm", Locale.getDefault()).format(Date(ep.timestampMs))
     val kind = when (ep.kind) {
         TaxonomyParser.Kind.GAME -> "Play"
@@ -299,11 +310,17 @@ private fun MemoryRow(ep: EpisodeRecord) {
         TaxonomyParser.Kind.ACOUSTIC -> "Acoustic"
         else -> "Note"
     }
+    val clipPath = ep.evidencePath
+    val hasClip = !clipPath.isNullOrBlank()
     Column(
         Modifier
             .fillMaxWidth()
             .background(Surface, Panel)
-            .border(1.dp, Hairline, Panel)
+            .border(1.dp, if (hasClip) Cyan.copy(alpha = 0.45f) else Hairline, Panel)
+            .then(
+                if (hasClip) Modifier.clickable { onOpenEvidence(clipPath!!) }
+                else Modifier
+            )
             .padding(16.dp)
     ) {
         Text(
@@ -332,6 +349,15 @@ private fun MemoryRow(ep: EpisodeRecord) {
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 modifier = Modifier.padding(top = 6.dp)
+            )
+        }
+        if (hasClip) {
+            Text(
+                "Tap to play clip",
+                color = Cyan,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
     }

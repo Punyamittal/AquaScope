@@ -171,9 +171,11 @@ class GuardianLedger(
     fun sessionSummary(started: Boolean): String {
         val snap = snapshot()
         return if (started) {
-            "Guardian session started. Collecting ambient RMS/bands until a baseline exists."
+            "Guardian session started. Collecting ambient sound until a quiet baseline exists. " +
+                "Labeled events (kitchen alert, cough, smoke, glass, fall) are stored as memories; " +
+                "with IR armed, repeated kitchen noise or emergencies can trigger an IR pulse."
         } else {
-            "Guardian session ended. ${snap.summary}"
+            "Guardian session ended. ${GuardianSense.spokenSnapshot(snap, guardianOn = false, irArmed = false)}"
         }
     }
 

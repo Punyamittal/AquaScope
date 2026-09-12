@@ -3325,6 +3325,7 @@ id btnBrightHigh
 id btnBrightLow
 id btnBrightMed
 id btnCancelDownload
+id btnClearToken
 id btnCloseEvidence
 id btnCloseReport
 id btnCompare
@@ -3343,12 +3344,14 @@ id btnOpenNeuralCore
 id btnPreviewHalo
 id btnReload
 id btnRemove
+id btnSaveOllama
 id btnSaveToken
 id btnScan
 id btnSetBaseline
 id btnShareReport
 id btnStartScan
 id btnTestHalo
+id btnTestOllama
 id btnViewEvidence
 id btnViewReport
 id btnWhy
@@ -3391,6 +3394,7 @@ id constraint
 id consume_window_insets_tag
 id container
 id containerDownloadModels
+id containerSkills
 id content
 id contentPanel
 id contiguous
@@ -3507,6 +3511,10 @@ id info
 id inputBar
 id inputHfToken
 id inputHfTokenLayout
+id inputOllamaModel
+id inputOllamaModelLayout
+id inputOllamaUrl
+id inputOllamaUrlLayout
 id inputQuestion
 id inspection_slot_table_set
 id invisible
@@ -3763,6 +3771,8 @@ id supportScrollUp
 id switchHaloEnabled
 id switchHaloNight
 id switchHaloSim
+id switchOllamaTranslate
+id switchSkillsMaster
 id switchUseLocal
 id tabMode
 id tag_accessibility_actions
@@ -3828,6 +3838,7 @@ id textNodeDeviation
 id textNodeObject
 id textNodeState
 id textNodeTitle
+id textOllamaStatus
 id textPointCount
 id textPointFeatures
 id textPointLabel
@@ -3855,7 +3866,9 @@ id textStatus
 id textStatusPill
 id textTimestamp
 id textTitle
+id textTokenStatus
 id textTop
+id textWhisperStatus
 id text_input_end_icon
 id text_input_error_icon
 id text_input_start_icon
@@ -4163,6 +4176,11 @@ string ask_anything_hint
 string ask_hello
 string ask_help_prompt
 string ask_smriti
+string ask_state_confirmed
+string ask_state_inferred
+string ask_state_observed
+string ask_state_possible
+string ask_state_unknown
 string ask_subtitle
 string baseline_deviation
 string bottom_sheet_behavior
@@ -4279,14 +4297,15 @@ string home_status
 string icon_content_description
 string in_progress
 string indeterminate
-string insufficient_evidence
 string item_view_role_description
 string label_evidence
 string label_inferred
 string label_observed
 string label_unknown
 string local_model_accept_license
+string local_model_already_running
 string local_model_cancel_download
+string local_model_clear_token
 string local_model_download
 string local_model_download_subtitle
 string local_model_download_title
@@ -4299,6 +4318,7 @@ string local_model_howto_body
 string local_model_import
 string local_model_import_downloads
 string local_model_installed
+string local_model_need_token
 string local_model_redownload
 string local_model_reload
 string local_model_remove
@@ -4307,9 +4327,12 @@ string local_model_replace_title
 string local_model_save_token
 string local_model_subtitle
 string local_model_title
+string local_model_token_already
 string local_model_token_cleared
 string local_model_token_empty
 string local_model_token_saved
+string local_model_token_status_none
+string local_model_token_status_saved
 string locations_heading
 string m3_exceed_max_badge_text_suffix
 string m3_ref_typeface_brand_medium
@@ -4427,6 +4450,13 @@ string neural_core_section
 string new_location
 string not_selected
 string off
+string ollama_base_url_hint
+string ollama_model_hint
+string ollama_save
+string ollama_saved
+string ollama_test
+string ollama_translate_enable
+string ollama_unreachable
 string on
 string password_toggle_content_description
 string path_password_eye
@@ -4477,9 +4507,14 @@ string set_baseline
 string share_report
 string side_sheet_accessibility_pane_title
 string side_sheet_behavior
+string skills_master_enable
+string skills_section_subtitle
+string skills_section_title
 string smriti_home_sub
 string smriti_home_title
 string snackbar_dismiss
+string speech_section_subtitle
+string speech_section_title
 string start_scan
 string status_bar_notification_info_overflow
 string suggestions_available
@@ -5794,3 +5829,5 @@ styleable ViewPager2 android_orientation
 styleable ViewStubCompat android_id android_layout android_inflatedId
 styleable ViewTransition android_id SharedValue SharedValueId clearsTag duration ifTagNotSet ifTagSet motionInterpolator motionTarget onStateTransition pathMotionArc setsTag transitionDisable upDuration viewTransitionMode
 styleable include constraintSet
+xml file_paths
+xml network_security_config

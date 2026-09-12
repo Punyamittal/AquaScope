@@ -48,7 +48,11 @@ class CaptureProjectionService : Service() {
             return START_NOT_STICKY
         }
         if (cmd?.action == ACTION_CLIP) {
-            recorder?.captureNow("manual")
+            val result = recorder?.captureNow("manual") ?: ClipFlushResult.NotRecording
+            if (result is ClipFlushResult.Saved) {
+                NeuralCoreSession.clipTick.value = System.currentTimeMillis()
+            }
+            NeuralCoreSession.clipSaved.value = result
             return START_STICKY
         }
         val data = projectionData(cmd)
@@ -67,6 +71,7 @@ class CaptureProjectionService : Service() {
                 NeuralCoreSession.clipTick.value = System.currentTimeMillis()
             }
             recorder?.start(resultCode, data, w, h, dpi)
+            actuators.setHalo(SmritiLightState.SCREEN_RECORDING)
         }
         running.value = true
         return START_STICKY
@@ -85,6 +90,10 @@ class CaptureProjectionService : Service() {
         wake = null
         instance = null
         running.value = false
+        HardwareActuators.get(this).setHalo(
+            if (GuardianService.isRunning()) SmritiLightState.VOICE_RECORDING
+            else SmritiLightState.NORMAL
+        )
         super.onDestroy()
     }
 
@@ -130,15 +139,29 @@ class CaptureProjectionService : Service() {
             else context.startService(i)
         }
 
-        fun captureNow(context: Context) {
+        fun captureNow(context: Context, reason: String = "manual"): ClipFlushResult {
             val live = instance
-            if (live != null) {
-                live.recorder?.captureNow("manual")
-                return
+            val recorder = live?.recorder
+            if (live == null || recorder == null) {
+                return ClipFlushResult.NotRecording
             }
-            context.startService(
-                Intent(context, CaptureProjectionService::class.java).setAction(ACTION_CLIP)
-            )
+            return recorder.captureNow(reason)
+        }
+
+        fun hasBufferedFrames(): Boolean = instance?.recorder?.hasBufferedFrames() == true
+
+        /**
+         * OCR + save the rolling buffer, then tear down projection.
+         * Call from a background thread — flush runs OCR synchronously.
+         */
+        fun flushAndStop(context: Context): ClipFlushResult {
+            val result = if (hasBufferedFrames()) {
+                captureNow(context, reason = "stop")
+            } else {
+                ClipFlushResult.Empty
+            }
+            stop(context)
+            return result
         }
 
         fun stop(context: Context) {
@@ -172,10 +195,11 @@ class GuardianService : Service() {
     private val heartbeat = object : Runnable {
         override fun run() {
             val snap = ledger.snapshot()
-            snapshotLine.value = snap.summary
+            val spoken = GuardianSense.spokenSnapshot(snap, guardianOn = true, irArmed = prefs.irArmed)
+            snapshotLine.value = spoken
             NeuralCoreMemory.rememberAsync(
                 context = this@GuardianService,
-                raw = "Guardian 10m digest: ${snap.summary}",
+                raw = "Guardian 10m digest: $spoken",
                 source = "GUARDIAN",
                 kind = TaxonomyParser.Kind.ACOUSTIC,
                 eventType = EventType.UNKNOWN,
@@ -214,6 +238,11 @@ class GuardianService : Service() {
             source = "GUARDIAN",
             kind = TaxonomyParser.Kind.ACOUSTIC,
             throttleMs = 0L
+        )
+        snapshotLine.value = GuardianSense.spokenSnapshot(
+            ledger.snapshot(),
+            guardianOn = true,
+            irArmed = prefs.irArmed
         )
     }
 
@@ -266,9 +295,10 @@ class GuardianService : Service() {
             onAmplitude = { rms ->
                 amplitude.value = rms
                 ledger.finishPostIrIfDue()?.let { follow ->
+                    val spoken = GuardianSense.followUpNarrative(follow)
                     NeuralCoreMemory.rememberAsync(
                         context = this,
-                        raw = follow,
+                        raw = spoken,
                         source = "IR",
                         kind = TaxonomyParser.Kind.ACOUSTIC,
                         eventType = EventType.UNKNOWN,
@@ -276,13 +306,24 @@ class GuardianService : Service() {
                     ) {
                         NeuralCoreSession.clipTick.value = System.currentTimeMillis()
                     }
-                    snapshotLine.value = ledger.snapshot().summary
+                    snapshotLine.value = GuardianSense.spokenSnapshot(
+                        ledger.snapshot(),
+                        guardianOn = true,
+                        irArmed = prefs.irArmed
+                    )
                 }
             }
         )
         ambient?.start()
-        actuators.setHalo(SmritiLightState.GUARDIAN)
-        snapshotLine.value = ledger.snapshot().summary
+        actuators.setHalo(
+            if (CaptureProjectionService.isRunning()) SmritiLightState.SCREEN_RECORDING
+            else SmritiLightState.VOICE_RECORDING
+        )
+        snapshotLine.value = GuardianSense.spokenSnapshot(
+            ledger.snapshot(),
+            guardianOn = true,
+            irArmed = prefs.irArmed
+        )
         Log.i(TAG, "Guardian listening")
     }
 
@@ -302,14 +343,27 @@ class GuardianService : Service() {
             timestampMs = System.currentTimeMillis()
         )
         ledger.ingest(window)
-        snapshotLine.value = ledger.snapshot().summary
+        snapshotLine.value = GuardianSense.spokenSnapshot(
+            ledger.snapshot(),
+            guardianOn = true,
+            irArmed = prefs.irArmed
+        )
         val label = ev.label ?: return
         val emergency = AmbientAudioSensorManager.haloFor(label) == SmritiLightState.EMERGENCY
+        val irDecision = ledger.shouldFireIr(label, prefs.irArmed)
+        val narrative = GuardianSense.eventNarrative(
+            label = label,
+            rms = ev.rms,
+            highFrac = ev.highFrac,
+            midFrac = ev.midFrac,
+            lowFrac = ev.lowFrac,
+            snap = ledger.snapshot(),
+            irArmed = prefs.irArmed,
+            irDecision = irDecision
+        )
         NeuralCoreMemory.rememberAsync(
             context = this,
-            raw = "Guardian ${label} rms=${"%.3f".format(ev.rms)} " +
-                "bands h/m/l=${"%.2f".format(ev.highFrac)}/${"%.2f".format(ev.midFrac)}/${"%.2f".format(ev.lowFrac)} " +
-                "vs ${ledger.snapshot().summary}",
+            raw = narrative,
             source = "GUARDIAN",
             kind = if (label == "fall") TaxonomyParser.Kind.HEALTH else TaxonomyParser.Kind.ACOUSTIC,
             eventType = if (emergency) EventType.ANOMALY else EventType.ACOUSTIC_DEVIATION,
@@ -320,25 +374,21 @@ class GuardianService : Service() {
         }
         actuators.pulseHalo(
             AmbientAudioSensorManager.haloFor(label),
-            SmritiLightState.GUARDIAN,
+            if (CaptureProjectionService.isRunning()) SmritiLightState.SCREEN_RECORDING
+            else SmritiLightState.VOICE_RECORDING,
             1600
         )
         if (emergency) actuators.haptic(HardwareActuatorService.HAPTIC_ALARM)
-        maybeFireIr(label, actuators)
+        maybeFireIr(actuators, irDecision)
     }
 
-    private fun maybeFireIr(label: String, actuators: HardwareActuators) {
-        val decision = ledger.shouldFireIr(label, NeuralCorePrefs(this).irArmed)
+    private fun maybeFireIr(actuators: HardwareActuators, decision: IrDecision) {
         if (!decision.fire) return
         val tx = actuators.transmitAcToggle(decision.reason)
         ledger.noteIrFired(tx)
         NeuralCoreMemory.rememberAsync(
             context = this,
-            raw = if (tx.ok) {
-                "IR blast ${tx.carrierHz}Hz ${tx.pulseCount} pulses because ${tx.reason}. ${tx.carrierHint}"
-            } else {
-                "IR blast skipped/failed (${tx.carrierHint}) for ${tx.reason}"
-            },
+            raw = GuardianSense.irOutcomeNarrative(tx),
             source = "IR",
             kind = TaxonomyParser.Kind.ACOUSTIC,
             eventType = EventType.UNKNOWN,
@@ -346,13 +396,20 @@ class GuardianService : Service() {
         ) {
             NeuralCoreSession.clipTick.value = System.currentTimeMillis()
         }
-        snapshotLine.value = ledger.snapshot().summary
+        snapshotLine.value = GuardianSense.spokenSnapshot(
+            ledger.snapshot(),
+            guardianOn = true,
+            irArmed = prefs.irArmed
+        )
     }
 
     private fun stopListening() {
         ambient?.stop()
         ambient = null
-        HardwareActuators.get(this).setHalo(SmritiLightState.NORMAL)
+        HardwareActuators.get(this).setHalo(
+            if (CaptureProjectionService.isRunning()) SmritiLightState.SCREEN_RECORDING
+            else SmritiLightState.NORMAL
+        )
     }
 
     companion object {
@@ -391,4 +448,8 @@ class GuardianService : Service() {
 
 object NeuralCoreSession {
     val clipTick = MutableStateFlow(0L)
+    val clipSaved = MutableStateFlow<ClipFlushResult?>(null)
+    /** Latest OCR text from a saved/stopped screen recording (for Ask / Qwen). */
+    @Volatile var lastScreenOcr: String = ""
+    @Volatile var lastScreenOcrPath: String? = null
 }

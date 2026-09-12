@@ -40,6 +40,10 @@
         "source": "com.aquascope.app-main-64:/anim/no_anim.xml"
     },
     {
+        "merged": "com.aquascope.app-merged_res-62:/xml_file_paths.xml.flat",
+        "source": "com.aquascope.app-main-64:/xml/file_paths.xml"
+    },
+    {
         "merged": "com.aquascope.app-merged_res-62:/layout_view_smriti_nav.xml.flat",
         "source": "com.aquascope.app-main-64:/layout/view_smriti_nav.xml"
     },
@@ -82,6 +86,10 @@
     {
         "merged": "com.aquascope.app-merged_res-62:/color_nav_item_color.xml.flat",
         "source": "com.aquascope.app-main-64:/color/nav_item_color.xml"
+    },
+    {
+        "merged": "com.aquascope.app-merged_res-62:/xml_network_security_config.xml.flat",
+        "source": "com.aquascope.app-main-64:/xml/network_security_config.xml"
     },
     {
         "merged": "com.aquascope.app-merged_res-62:/drawable_bg_smriti_panel.xml.flat",

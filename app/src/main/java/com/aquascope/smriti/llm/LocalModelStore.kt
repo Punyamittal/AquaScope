@@ -66,43 +66,52 @@ class LocalModelStore(context: Context) {
 
     fun findInstalled(): File? {
         recoverCompleteDownloads()
+        // Ask loads MediaPipe today. Gemma 4 .litertlm is downloadable/stored separately.
+        return findInstalledMediaPipe()
+    }
+
+    fun findInstalledMediaPipe(): File? {
+        recoverCompleteDownloads()
         val preferred = LocalModelCatalog.preferredFileNames()
         for (name in preferred) {
             val f = File(root, name)
             val expected = LocalModelCatalog.downloadable.find { it.fileName == name }?.sizeBytes ?: 0L
             if (f.isFile &&
                 LocalModelDownloadPolicy.isCompleteEnough(f.length(), expected) &&
-                isLoadableMediaPipe(name)
+                isLoadableMediaPipe(name) &&
+                !isSpeechAsset(name)
             ) return f
         }
         val files = listModelFiles().filter { file ->
             val expected = LocalModelCatalog.downloadable.find { it.fileName == file.name }?.sizeBytes ?: 0L
-            LocalModelDownloadPolicy.isCompleteEnough(file.length(), expected) && isLoadableMediaPipe(file.name)
+            LocalModelDownloadPolicy.isCompleteEnough(file.length(), expected) &&
+                isLoadableMediaPipe(file.name) &&
+                !isSpeechAsset(file.name)
         }
         return files.firstOrNull { isPreferredTask(it.name) } ?: files.firstOrNull()
     }
 
-    fun status(): LocalModelStatus {
-        val file = findInstalled()
-        if (file != null) {
-            return LocalModelStatus(
+    /** Whisper / speech TFLite — never selected as the Ask LLM. */
+    fun findWhisperInstalled(): File? {
+        recoverCompleteDownloads()
+        LocalModelCatalog.downloadableSpeech.forEach { entry ->
+            val f = fileFor(entry.fileName)
+            if (f.isFile && LocalModelDownloadPolicy.isCompleteEnough(f.length(), entry.sizeBytes)) {
+                return f
+            }
+        }
+        return listModelFiles().firstOrNull { isSpeechAsset(it.name) && it.length() > MIN_BYTES }
+    }
+
+    fun whisperStatus(): LocalModelStatus {
+        val file = findWhisperInstalled()
+        return if (file != null) {
+            LocalModelStatus(
                 ready = true,
                 path = file.absolutePath,
                 displayName = file.name,
                 sizeBytes = file.length(),
-                message = "Local model file found: ${file.name}"
-            )
-        }
-        val gallery = listModelFiles().firstOrNull {
-            it.length() > MIN_BYTES && it.name.endsWith(".litertlm", ignoreCase = true)
-        }
-        return if (gallery != null) {
-            LocalModelStatus(
-                ready = false,
-                path = gallery.absolutePath,
-                displayName = gallery.name,
-                sizeBytes = gallery.length(),
-                message = GALLERY_NPU_MESSAGE
+                message = "Whisper ready for Neural Core Speak: ${file.name}"
             )
         } else {
             LocalModelStatus(
@@ -110,9 +119,61 @@ class LocalModelStore(context: Context) {
                 path = null,
                 displayName = null,
                 sizeBytes = 0L,
-                message = MISSING_TASK_MESSAGE
+                message = "No Whisper yet. Download Whisper Tiny — Neural Core Speak uses it on-device."
             )
         }
+    }
+
+    fun findInstalledLiteRt(): File? {
+        recoverCompleteDownloads()
+        val names = listOf(
+            LocalModelCatalog.gemma4_e4b.fileName,
+            LocalModelCatalog.gemma4_e4b_full.fileName,
+            "gemma-4-E4B-it-gpu.litertlm",
+            "gemma-4-E2B-it.litertlm"
+        )
+        for (name in names) {
+            val f = File(root, name)
+            val expected = LocalModelCatalog.downloadable.find { it.fileName == name }?.sizeBytes ?: 0L
+            if (f.isFile &&
+                LocalModelDownloadPolicy.isCompleteEnough(f.length(), expected) &&
+                isLoadableLiteRt(name)
+            ) return f
+        }
+        return listModelFiles().firstOrNull {
+            isLoadableLiteRt(it.name) && it.length() > MIN_BYTES
+        }
+    }
+
+    fun status(): LocalModelStatus {
+        val file = findInstalledMediaPipe()
+        if (file != null) {
+            return LocalModelStatus(
+                ready = true,
+                path = file.absolutePath,
+                displayName = file.name,
+                sizeBytes = file.length(),
+                message = "Local MediaPipe model ready for Ask: ${file.name}"
+            )
+        }
+        val litert = findInstalledLiteRt()
+        if (litert != null) {
+            return LocalModelStatus(
+                ready = false,
+                path = litert.absolutePath,
+                displayName = litert.name,
+                sizeBytes = litert.length(),
+                message = "Gemma 4 file is on this phone (${litert.name}). " +
+                    "Ask still needs Gemma 3 1B or Qwen (.task) until LiteRT-LM is enabled in a Kotlin 2.x build."
+            )
+        }
+        return LocalModelStatus(
+            ready = false,
+            path = null,
+            displayName = null,
+            sizeBytes = 0L,
+            message = MISSING_TASK_MESSAGE
+        )
     }
 
     fun importFromUri(context: Context, uri: Uri, targetName: String? = null): File {
@@ -234,16 +295,31 @@ class LocalModelStore(context: Context) {
 
         fun isLoadableMediaPipe(name: String): Boolean {
             val n = name.lowercase()
+            // Whisper .tflite is speech-only — MediaPipe GenAI will not load it.
+            if (isSpeechAsset(n)) return false
             return n.endsWith(".task") || n.endsWith(".bin") || n.endsWith(".tflite")
         }
 
+        fun isSpeechAsset(name: String): Boolean {
+            val n = name.lowercase()
+            if (LocalModelCatalog.entryForFileName(name)?.isSpeech == true) return true
+            return n.contains("whisper") && (n.endsWith(".tflite") || n.endsWith(".bin"))
+        }
+
+        /** Official Gemma 4 LiteRT-LM bundles (not random Gallery NPU exports). */
+        fun isLoadableLiteRt(name: String): Boolean {
+            val n = name.lowercase()
+            if (!n.endsWith(".litertlm")) return false
+            return n.contains("gemma-4") || n.contains("gemma4")
+        }
+
         const val GALLERY_NPU_MESSAGE =
-            "Found an Edge Gallery NPU file (.litertlm). This app cannot use Gallery's copy. " +
-                "Download Gemma 3 1B INT4 (.task) on this System screen, or Import gemma3-1b-it-int4.task."
+            "Found a .litertlm file. Gemma 4 E4B can be downloaded on this screen. " +
+                "Ask currently runs MediaPipe .task models (Gemma 3 1B / Qwen)."
 
         const val MISSING_TASK_MESSAGE =
-            "No MediaPipe .task in this app. Downloading Gemma in Edge Gallery does not install it here — " +
-                "Gallery keeps models in its own sandbox. Download Gemma 3 1B on this screen."
+            "No MediaPipe .task for Ask yet. Download Gemma 3 1B (.task) or Qwen, " +
+                "and optionally Gemma 4 E4B (.litertlm) for on-device storage."
     }
 }
 

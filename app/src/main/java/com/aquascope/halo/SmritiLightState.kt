@@ -33,6 +33,10 @@ enum class SmritiLightState {
     HEALTH_OK,
     /** Deep emerald — guardian ambient listening */
     GUARDIAN,
+    /** Solid red — screen capture / Play buffer armed */
+    SCREEN_RECORDING,
+    /** Orange — voice / mic recording active */
+    VOICE_RECORDING,
     /** Fast strobe white — fall / glass / alarm */
     EMERGENCY,
     /** Lights off / night / privacy */
@@ -67,6 +71,7 @@ object HaloPalette {
     const val NEUTRAL_WHITE = 0xFFD0D0D0.toInt()
     const val PHOSPHOR_CYAN = 0xFF00F0FF.toInt()
     const val CRIMSON = 0xFFFF003C.toInt()
+    const val ORANGE = 0xFFFF8A00.toInt()
     const val AMBER_HEALTH = 0xFFFFB800.toInt()
     const val EMERALD = 0xFF00C853.toInt()
     const val STROBE_WHITE = 0xFFFFFFFF.toInt()
@@ -120,6 +125,12 @@ object HaloPalette {
             )
             SmritiLightState.GUARDIAN -> HaloRender(
                 state, EMERALD, TEAL, 0.45f * b, MOTION_BREATHE, 2400, "Guardian"
+            )
+            SmritiLightState.SCREEN_RECORDING -> HaloRender(
+                state, CRIMSON, RED_RESTRAINED, 0.85f * b, MOTION_BREATHE, 1400, "Screen rec"
+            )
+            SmritiLightState.VOICE_RECORDING -> HaloRender(
+                state, ORANGE, AMBER, 0.75f * b, MOTION_BREATHE, 1600, "Voice rec"
             )
             SmritiLightState.EMERGENCY -> HaloRender(
                 state, STROBE_WHITE, CRIMSON, 1f, MOTION_SOLID, 120, "Emergency"
