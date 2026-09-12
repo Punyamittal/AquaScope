@@ -56,6 +56,7 @@ AquaScope/
 │   ├── src/main/cpp/     KissFFT STFT, log-mel filterbank, 72-d fingerprint, JNI bridge
 │   └── src/main/java/    AcousticProbe, DspEngine, EpisodicStore, RecallEngine, UI
 ├── smriti-core/          Merged iQOO 15 offline second-brain core module
+├── screenmind/           Integrated Desktop AI Screen Memory Engine (Gemma 4 via llama.cpp)
 ├── core-database/        Room episode database, local embedding & taxonomy
 ├── core-hardware/        Monster Halo RGB, haptic actuator, IR blaster
 ├── core-telemetry/       1 Hz RAM + thermal telemetry monitor
