@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AquaScope</string>
-    <string name="tagline">Acoustic moisture sensing</string>
+    <string name="tagline">Acoustic moisture sensing · tuned for iQOO 15</string>
     <string name="locations_heading">Scan locations</string>
     <string name="empty_locations_title">No locations yet</string>
     <string name="empty_locations_body">Create a location, set a dry baseline, then compare later scans for moisture anomalies.</string>

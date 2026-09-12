@@ -2,9 +2,11 @@
 
 An Android app that turns your phone into a vibro-acoustic wall/pipe diagnostic tool. Hold the phone flat against a surface, emit a chirp sweep, record the response, and detect moisture anomalies from changes in resonance, decay, and spectral properties.
 
+**Hackathon target device: iQOO 15** (Snapdragon 8 Elite Gen 5, dual stereo speakers, Android 16 / OriginOS 6). Defaults prefer **48 kHz**, chirp **80 Hz–16 kHz**, full media volume + speakerphone during capture. Works on both **12 GB and 16 GB** RAM variants — AquaScope is DSP-only (≪1 GB); it does **not** run local LLMs (Qwen/Gemma advice is unrelated).
+
 ## How It Works
 
-1. **Chirp emission**: A logarithmic sine sweep (20 Hz – 15 kHz) plays through the speaker while held against the surface
+1. **Chirp emission**: A logarithmic sine sweep (80 Hz – 16 kHz on iQOO profile) plays through the speaker while held against the surface
 2. **Recording**: The microphone captures the surface's vibro-acoustic response
 3. **Deconvolution**: FFT-based spectral division recovers the surface's impulse response
 4. **Feature extraction**: Resonance frequency, decay time, spectral centroid, spread, and flatness
@@ -25,8 +27,11 @@ app/src/main/java/com/aquascope/
 
 1. Open in Android Studio (Hedgehog or newer)
 2. Sync Gradle
-3. Run on a physical device (emulator won't produce meaningful acoustic results)
+3. Run on a **physical iQOO 15** (or similar Snapdragon flagship) — emulator won't produce meaningful acoustic results
 4. Grant microphone permission when prompted
+5. Before scanning: disable Do Not Disturb / game audio boosters if they duck media volume; hold phone flush so speaker + mic both contact the surface
+
+Device profile: `app/src/main/java/com/aquascope/audio/IqooDeviceProfile.kt`
 
 ### Running Unit Tests
 

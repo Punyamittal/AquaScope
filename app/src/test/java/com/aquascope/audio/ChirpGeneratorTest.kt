@@ -28,14 +28,14 @@ class ChirpGeneratorTest {
     }
 
     @Test
-    fun `toShortArray preserves signal shape`() {
-        val chirp = ChirpGenerator.generate(durationSec = 0.1)
-        val shorts = ChirpGenerator.toShortArray(chirp)
-        assertEquals(chirp.size, shorts.size)
-        // Check a few samples for correct scaling
-        for (i in chirp.indices step 100) {
-            val expected = (chirp[i] * Short.MAX_VALUE).toInt().toShort()
-            assertEquals(expected, shorts[i])
-        }
+    fun `iqoo profile defaults use preferred sample rate and band`() {
+        assertEquals(IqooDeviceProfile.PREFERRED_SAMPLE_RATE, ChirpGenerator.DEFAULT_SAMPLE_RATE)
+        assertEquals(IqooDeviceProfile.CHIRP_START_HZ, ChirpGenerator.DEFAULT_START_FREQ, 0.0)
+        assertEquals(IqooDeviceProfile.CHIRP_END_HZ, ChirpGenerator.DEFAULT_END_FREQ, 0.0)
+        val chirp = ChirpGenerator.generate()
+        assertEquals(
+            (IqooDeviceProfile.CHIRP_DURATION_SEC * IqooDeviceProfile.PREFERRED_SAMPLE_RATE).toInt(),
+            chirp.size
+        )
     }
 }

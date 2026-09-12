@@ -4,15 +4,16 @@ import kotlin.math.*
 
 /**
  * Generates a logarithmic sine sweep (chirp) from startFreq to endFreq.
- * The instantaneous frequency increases exponentially, giving equal energy per octave.
+ * Defaults are tuned for **iQOO 15** dual stereo / Snapdragon audio path
+ * (see [IqooDeviceProfile]).
  */
 object ChirpGenerator {
 
-    // TODO: Tune these defaults against real hardware measurements
-    const val DEFAULT_START_FREQ = 20.0
-    const val DEFAULT_END_FREQ = 15000.0
-    const val DEFAULT_DURATION_SEC = 1.5
-    const val DEFAULT_SAMPLE_RATE = 44100
+    // Tuned for iQOO 15 contact sensing — recalibrate with dry/wet drywall if needed
+    const val DEFAULT_START_FREQ = IqooDeviceProfile.CHIRP_START_HZ
+    const val DEFAULT_END_FREQ = IqooDeviceProfile.CHIRP_END_HZ
+    const val DEFAULT_DURATION_SEC = IqooDeviceProfile.CHIRP_DURATION_SEC
+    const val DEFAULT_SAMPLE_RATE = IqooDeviceProfile.PREFERRED_SAMPLE_RATE
 
     /**
      * Generate a logarithmic chirp as a DoubleArray of PCM samples in [-1, 1].
@@ -25,6 +26,13 @@ object ChirpGenerator {
         durationSec: Double = DEFAULT_DURATION_SEC,
         sampleRate: Int = DEFAULT_SAMPLE_RATE
     ): DoubleArray {
+        require(startFreq > 0.0 && endFreq > startFreq) {
+            "Invalid chirp band: $startFreq – $endFreq Hz"
+        }
+        require(durationSec > 0.0 && sampleRate > 0) {
+            "Invalid duration/sampleRate: $durationSec s @ $sampleRate Hz"
+        }
+
         val numSamples = (durationSec * sampleRate).toInt()
         val samples = DoubleArray(numSamples)
 

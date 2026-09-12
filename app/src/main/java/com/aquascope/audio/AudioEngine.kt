@@ -2,6 +2,7 @@ package com.aquascope.audio
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
@@ -11,21 +12,20 @@ import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.AudioEffect
 import android.media.audiofx.AutomaticGainControl
 import android.media.audiofx.NoiseSuppressor
+import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Handles simultaneous chirp playback + recording.
- * Keeps AEC/NS/AGC disabled for the full capture window to preserve the raw surface response.
+ * Simultaneous chirp playback + recording, tuned for **iQOO 15** (Snapdragon 8 Elite Gen 5,
+ * dual stereo speakers). Keeps AEC/NS/AGC disabled for the full capture window.
  */
 class AudioEngine(
     private val context: Context,
-    private val chirpDurationSec: Double = ChirpGenerator.DEFAULT_DURATION_SEC
+    private val chirpDurationSec: Double = IqooDeviceProfile.CHIRP_DURATION_SEC
 ) {
-    // Extra recording tail to capture surface decay after chirp ends
-    // TODO: Tune tail length based on observed decay times
-    private val tailDurationSec = 0.5
+    private val tailDurationSec = IqooDeviceProfile.RECORD_TAIL_SEC
 
     data class CaptureResult(
         val recorded: DoubleArray,
@@ -33,34 +33,45 @@ class AudioEngine(
         val sampleRate: Int
     )
 
-    /**
-     * Play chirp through speaker and simultaneously record microphone.
-     * Must be called from a coroutine scope.
-     */
     suspend fun playAndRecord(): CaptureResult = withContext(Dispatchers.IO) {
         val sampleRate = pickSampleRate()
         val totalRecordSamples = ((chirpDurationSec + tailDurationSec) * sampleRate).toInt()
-        val chirp = ChirpGenerator.generate(sampleRate = sampleRate, durationSec = chirpDurationSec)
+        val chirp = ChirpGenerator.generate(
+            startFreq = IqooDeviceProfile.CHIRP_START_HZ,
+            endFreq = IqooDeviceProfile.CHIRP_END_HZ,
+            sampleRate = sampleRate,
+            durationSec = chirpDurationSec
+        )
         val chirpShorts = ChirpGenerator.toShortArray(chirp)
 
         val minRecordBuf = AudioRecord.getMinBufferSize(
             sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
         require(minRecordBuf > 0) { "Recording not supported at $sampleRate Hz" }
-        val recordBufSize = maxOf(minRecordBuf * 2, 4096 * 2)
+        val recordBufSize = maxOf(minRecordBuf * 2, 8192 * 2)
 
         var recorder: AudioRecord? = null
         var player: AudioTrack? = null
         val heldEffects = mutableListOf<AudioEffect>()
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val previousMode = audioManager.mode
+        @Suppress("DEPRECATION")
         val previousSpeaker = audioManager.isSpeakerphoneOn
+        val previousMusicVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         val playbackError = AtomicReference<Exception?>(null)
+        var focusRequest: AudioFocusRequest? = null
 
         try {
+            // iQOO / OriginOS: force media path through loudspeakers at full stream volume
             audioManager.mode = AudioManager.MODE_NORMAL
             @Suppress("DEPRECATION")
             audioManager.isSpeakerphoneOn = true
+            audioManager.setStreamVolume(
+                AudioManager.STREAM_MUSIC,
+                audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC),
+                0
+            )
+            focusRequest = requestPlaybackFocus(audioManager)
 
             recorder = createRecorder(sampleRate, recordBufSize)
             heldEffects += holdEffectsDisabled(recorder.audioSessionId)
@@ -73,13 +84,13 @@ class AudioEngine(
 
             val recordedShorts = ShortArray(totalRecordSamples)
             var totalRead = 0
+            val writeChunk = IqooDeviceProfile.PLAY_WRITE_CHUNK
 
-            // Stream chirp on a background thread while we capture on this thread
             val playThread = Thread({
                 try {
                     var offset = 0
                     while (offset < chirpShorts.size && playbackError.get() == null) {
-                        val chunk = minOf(1024, chirpShorts.size - offset)
+                        val chunk = minOf(writeChunk, chirpShorts.size - offset)
                         val written = player.write(chirpShorts, offset, chunk)
                         if (written < 0) {
                             throw IllegalStateException("AudioTrack write failed (code $written)")
@@ -98,7 +109,7 @@ class AudioEngine(
                 playbackError.get()?.let { throw it }
                 val read = recorder.read(
                     recordedShorts, totalRead,
-                    minOf(2048, totalRecordSamples - totalRead)
+                    minOf(4096, totalRecordSamples - totalRead)
                 )
                 if (read > 0) {
                     totalRead += read
@@ -108,7 +119,6 @@ class AudioEngine(
             }
 
             playThread.join(3000)
-
             playbackError.get()?.let { throw it }
 
             val minAcceptable = (chirpDurationSec * sampleRate).toInt()
@@ -121,7 +131,9 @@ class AudioEngine(
             }
             CaptureResult(recorded, chirp, sampleRate)
         } finally {
+            abandonPlaybackFocus(audioManager, focusRequest)
             try {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, previousMusicVolume, 0)
                 @Suppress("DEPRECATION")
                 audioManager.isSpeakerphoneOn = previousSpeaker
                 audioManager.mode = previousMode
@@ -151,8 +163,48 @@ class AudioEngine(
         }
     }
 
+    private fun requestPlaybackFocus(audioManager: AudioManager): AudioFocusRequest? {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val attrs = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+                val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+                    .setAudioAttributes(attrs)
+                    .setOnAudioFocusChangeListener { }
+                    .build()
+                audioManager.requestAudioFocus(req)
+                req
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(
+                    null,
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+                )
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun abandonPlaybackFocus(audioManager: AudioManager, request: AudioFocusRequest?) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && request != null) {
+                audioManager.abandonAudioFocusRequest(request)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.abandonAudioFocus(null)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    /** Prefer 48 kHz first — native rate on Snapdragon Hi-Res / iQOO 15. */
     private fun pickSampleRate(): Int {
-        for (rate in listOf(44100, 48000, 16000)) {
+        for (rate in IqooDeviceProfile.SAMPLE_RATE_CANDIDATES) {
             val playOk = AudioTrack.getMinBufferSize(
                 rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
             )
@@ -161,7 +213,7 @@ class AudioEngine(
             )
             if (playOk > 0 && recOk > 0) return rate
         }
-        return 44100
+        return IqooDeviceProfile.PREFERRED_SAMPLE_RATE
     }
 
     private fun createPlayer(sampleRate: Int): AudioTrack {
@@ -169,9 +221,7 @@ class AudioEngine(
             sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
         )
         require(minBuf > 0) { "Playback not supported at $sampleRate Hz" }
-
-        // MODE_STREAM is far more reliable across OEMs than MODE_STATIC
-        val streamBuf = maxOf(minBuf * 2, 4096 * 2)
+        val streamBuf = maxOf(minBuf * 4, 8192 * 2)
 
         val attempts = listOf(
             {
@@ -214,7 +264,6 @@ class AudioEngine(
                     .build()
             },
             {
-                // Legacy constructor — still works on devices where Builder fails
                 @Suppress("DEPRECATION")
                 AudioTrack(
                     AudioManager.STREAM_MUSIC,
@@ -231,9 +280,7 @@ class AudioEngine(
         for (factory in attempts) {
             try {
                 val track = factory()
-                if (track.state == AudioTrack.STATE_INITIALIZED) {
-                    return track
-                }
+                if (track.state == AudioTrack.STATE_INITIALIZED) return track
                 track.release()
             } catch (e: Exception) {
                 lastError = e
@@ -253,9 +300,7 @@ class AudioEngine(
                     AudioFormat.ENCODING_PCM_16BIT,
                     recordBufSize
                 )
-                if (recorder.state == AudioRecord.STATE_INITIALIZED) {
-                    return recorder
-                }
+                if (recorder.state == AudioRecord.STATE_INITIALIZED) return recorder
                 recorder.release()
             } catch (e: Exception) {
                 lastError = e
