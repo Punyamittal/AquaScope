@@ -39,8 +39,12 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.hypot
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -81,6 +85,10 @@ fun SmritiTelemetryUI(
     onVoiceRecall: () -> Unit,
     onGuardian: (Boolean) -> Unit,
     onIr: (Boolean) -> Unit,
+    onScreenMind: (Boolean) -> Unit = {},
+    onScreenMindPc: (Boolean) -> Unit = {},
+    onSwipeOcr: (Boolean) -> Unit = {},
+    onOpenLibrary: () -> Unit = {},
     onArmPlay: () -> Unit,
     onDisarmPlay: () -> Unit,
     onManualClip: () -> Unit,
@@ -96,6 +104,35 @@ fun SmritiTelemetryUI(
             .background(Navy)
             .imePadding()
             .padding(horizontal = 24.dp, vertical = 16.dp)
+            // In-app only: 2-finger swipe opens OCR picker (no system overlay).
+            .pointerInput(onOcr) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    var trackingTwo = false
+                    var startX = 0f
+                    var startY = 0f
+                    var fired = false
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val pressed = event.changes.filter { it.pressed }
+                        if (pressed.size >= 2) {
+                            val cx = pressed.map { it.position.x }.average().toFloat()
+                            val cy = pressed.map { it.position.y }.average().toFloat()
+                            if (!trackingTwo) {
+                                trackingTwo = true
+                                startX = cx
+                                startY = cy
+                            } else if (!fired && hypot(cx - startX, cy - startY) > 90f) {
+                                fired = true
+                                pressed.forEach { it.consume() }
+                                onOcr()
+                                break
+                            }
+                        }
+                        if (pressed.isEmpty()) break
+                    }
+                }
+            }
     ) {
         Row(
             Modifier.fillMaxWidth(),
@@ -159,6 +196,26 @@ fun SmritiTelemetryUI(
                 modifier = Modifier.padding(top = 10.dp)
             )
             if (state.timeline.isNotEmpty()) {
+                val clips = state.timeline.filter {
+                    !it.evidencePath.isNullOrBlank() &&
+                        (it.source.equals("PEACE", true) ||
+                            it.evidencePath!!.endsWith(".mp4", true) ||
+                            it.kind == TaxonomyParser.Kind.GAME)
+                }
+                if (clips.isNotEmpty()) {
+                    Text(
+                        "CLIPS",
+                        color = Cyan,
+                        fontSize = 10.sp,
+                        letterSpacing = 1.6.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(top = 18.dp, bottom = 8.dp)
+                    )
+                    clips.take(5).forEach { ep ->
+                        ClipMemoryRow(ep, onOpenEvidence)
+                        Spacer(Modifier.padding(bottom = 8.dp))
+                    }
+                }
                 Text(
                     "MEMORY",
                     color = Cyan,
@@ -187,6 +244,38 @@ fun SmritiTelemetryUI(
                 on = onIr
             )
         }
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            QuietSwitch("ScreenMind", state.screenMindOn, on = onScreenMind)
+            QuietSwitch("PC Mind", state.screenMindPcOn, on = onScreenMindPc)
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            QuietSwitch("Swipe OCR", state.swipeOcrOn, on = onSwipeOcr)
+            TextButton(onClick = onOpenLibrary) {
+                Text("Library", color = Cyan, fontSize = 13.sp)
+            }
+        }
+        Text(
+            if (state.swipeOcrOn) {
+                "Swipe OCR on — swipe up from the bottom edge (transparent band). Rest of phone stays normal/fast. Saves to Library."
+            } else if (state.playArmed) {
+                "Capture armed — PEACE saves highlight windows only (not full 30s). Enable Gemma OCR in System for best summaries."
+            } else if (state.screenMindOn) {
+                "ScreenMind analyzes Capture / OCR. Capture = PEACE highlight clips (±5s around action)."
+            } else {
+                "ScreenMind off — Capture still saves PEACE highlight clips (±5s), not the whole recording."
+            },
+            color = Faint,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(top = 2.dp)
+        )
         if (state.guardianOn) {
             QuietWave(state.amplitude)
             if (state.guardianLine.isNotBlank()) {
@@ -217,7 +306,7 @@ fun SmritiTelemetryUI(
                     contentColor = Ink
                 ),
                 elevation = ButtonDefaults.buttonElevation(0.dp)
-            ) { Text("OCR", fontSize = 13.sp) }
+            ) { Text("Mind", fontSize = 13.sp) }
             SecondaryAction("Save", Modifier.weight(1f), onIngestNote)
         }
 
@@ -271,7 +360,7 @@ fun SmritiTelemetryUI(
                 shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Ocean)
-            ) { Text("Speak", fontSize = 14.sp) }
+            ) { Text("Whisper", fontSize = 14.sp) }
         }
     }
 }
@@ -302,6 +391,70 @@ private fun QuietWave(amp: Float) {
 }
 
 @Composable
+private fun ClipMemoryRow(ep: EpisodeRecord, onOpenEvidence: (String) -> Unit) {
+    val whenText = SimpleDateFormat("d MMM · HH:mm", Locale.getDefault()).format(Date(ep.timestampMs))
+    val summary = episodeSummary(ep)
+    val clipPath = ep.evidencePath ?: return
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(Surface, Panel)
+            .border(1.dp, Cyan.copy(alpha = 0.55f), Panel)
+            .clickable { onOpenEvidence(clipPath) }
+            .padding(16.dp)
+    ) {
+        Text(
+            "CLIP · ${ep.source.uppercase(Locale.getDefault())}",
+            color = Cyan,
+            fontSize = 10.sp,
+            letterSpacing = 1.6.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            ep.title,
+            color = Ink,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        if (summary.isNotBlank() && !summary.equals(ep.title, true)) {
+            Text(
+                summary.take(220),
+                color = Mute,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        }
+        Text(
+            "$whenText  ·  Tap to play",
+            color = Cyan,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+private fun episodeSummary(ep: EpisodeRecord): String {
+    val body = ep.body
+    for (line in body.lineSequence()) {
+        val t = line.trim()
+        val m = Regex("""(?i)^summary\s*:\s*(.+)$""").find(t)?.groupValues?.getOrNull(1)
+        if (!m.isNullOrBlank()) return m.trim()
+    }
+    val skip = setOf("title:", "peace", "category:", "file:", "tags:", "ocr file")
+    return body.lineSequence()
+        .map { it.trim() }
+        .filter { it.length > 8 }
+        .firstOrNull { line ->
+            val lower = line.lowercase(Locale.getDefault())
+            skip.none { lower.startsWith(it) } && !line.equals(ep.title, true)
+        }
+        .orEmpty()
+}
+
+@Composable
 private fun MemoryRow(ep: EpisodeRecord, onOpenEvidence: (String) -> Unit) {
     val whenText = SimpleDateFormat("d MMM · HH:mm", Locale.getDefault()).format(Date(ep.timestampMs))
     val kind = when (ep.kind) {
@@ -312,6 +465,7 @@ private fun MemoryRow(ep: EpisodeRecord, onOpenEvidence: (String) -> Unit) {
     }
     val clipPath = ep.evidencePath
     val hasClip = !clipPath.isNullOrBlank()
+    val summary = episodeSummary(ep)
     Column(
         Modifier
             .fillMaxWidth()
@@ -342,7 +496,15 @@ private fun MemoryRow(ep: EpisodeRecord, onOpenEvidence: (String) -> Unit) {
             fontSize = 12.sp,
             modifier = Modifier.padding(top = 4.dp)
         )
-        if (ep.body.isNotBlank()) {
+        if (summary.isNotBlank()) {
+            Text(
+                summary.take(200),
+                color = Mute,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        } else if (ep.body.isNotBlank()) {
             Text(
                 ep.body.take(160),
                 color = Mute,

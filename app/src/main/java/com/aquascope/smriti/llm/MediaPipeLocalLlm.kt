@@ -89,8 +89,8 @@ class MediaPipeLocalLlm(
             LlmInferenceSession.createFromOptions(
                 engine,
                 LlmInferenceSession.LlmInferenceSessionOptions.builder()
-                    .setTopK(40)
-                    .setTemperature(0.7f)
+                    .setTopK(20)
+                    .setTemperature(0.35f)
                     .build()
             )
         }
@@ -107,9 +107,9 @@ class MediaPipeLocalLlm(
 
     private fun sessionOptions(): LlmInferenceSession.LlmInferenceSessionOptions =
         LlmInferenceSession.LlmInferenceSessionOptions.builder()
-            .setTopK(40)
-            .setTopP(0.95f)
-            .setTemperature(0.7f)
+            .setTopK(20)
+            .setTopP(0.8f)
+            .setTemperature(0.35f)
             .setGraphOptions(
                 GraphOptions.builder()
                     .setEnableVisionModality(false)
@@ -124,13 +124,39 @@ class MediaPipeLocalLlm(
         var text = formatPrompt(prompt)
         val tokens = runCatching { engine.sizeInTokens(text) }.getOrNull()
         if (tokens != null && tokens > budget) {
-            val keep = ((text.length.toLong() * budget) / tokens).toInt().coerceAtLeast(400)
-            text = text.take(keep)
-            Log.w(TAG, "Clipped prompt $tokens → ~$budget tokens")
+            text = keepQuestionAndScreenFacts(prompt, budget)
+            Log.w(TAG, "Clipped prompt $tokens → ~$budget tokens (kept SCREEN_OCR)")
         } else if (tokens == null && text.length > budget * 4) {
-            text = text.take(budget * 4)
+            text = keepQuestionAndScreenFacts(prompt, budget)
         }
         return text
+    }
+
+    /** Prefer USER_QUESTION + SCREEN_OCR over prefix-only take() which dropped the clip. */
+    private fun keepQuestionAndScreenFacts(raw: String, tokenBudget: Int): String {
+        val charBudget = (tokenBudget * 3).coerceAtLeast(800)
+        val q = Regex("USER_QUESTION:\\s*(.+)").find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        val ocr = Regex("SCREEN_OCR:\\s*([\\s\\S]*?)(?:\\nEVIDENCE_STATE:|\\nCANONICAL_ANSWER:|\\nMEMORY_EVENTS)")
+            .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        val canon = Regex("CANONICAL_ANSWER:\\s*([\\s\\S]*?)(?:\\nSCREEN_OCR:|\\nMEMORY_EVENTS|\\nEVIDENCE_STATE:)")
+            .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+            .ifBlank {
+                Regex("CANONICAL_ANSWER:\\s*([\\s\\S]*?)(?:\\nMEMORY_EVENTS)")
+                    .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+            }
+        val compact = buildString {
+            appendLine("Answer ONLY from SCREEN_OCR / CANONICAL_ANSWER. Under 120 words.")
+            appendLine("USER_QUESTION: ${q.take(200)}")
+            appendLine()
+            appendLine("SCREEN_OCR:")
+            appendLine(ocr.take(1_600).ifBlank { "(none)" })
+            appendLine()
+            appendLine("CANONICAL_ANSWER:")
+            appendLine(canon.take(800).ifBlank { "(none)" })
+            appendLine()
+            append("ANSWER:")
+        }
+        return formatPrompt(compact.take(charBudget))
     }
 
     private fun formatPrompt(raw: String): String {
@@ -144,8 +170,7 @@ class MediaPipeLocalLlm(
     }
 
     private fun shortenForRetry(prompt: String): String {
-        val cut = prompt.length / 2
-        return if (cut < 200) prompt else prompt.take(cut)
+        return keepQuestionAndScreenFacts(prompt, maxTokens / 2)
     }
 
     override fun close() {

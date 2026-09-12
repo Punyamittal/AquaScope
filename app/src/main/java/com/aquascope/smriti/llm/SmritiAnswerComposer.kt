@@ -66,13 +66,15 @@ class SmritiAnswerComposer(
         }
 
         val cleaned = AskAnswerCleaner.cleanModelOutput(polished)
+        val screenQa = looksLikeScreenOrMemoryQa(question, cleanedRule)
+        val hasScreenOcr = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr.isNotBlank()
+        // Never relax for Wikipedia / world tools when answering from a clip.
         val relaxGrounding = skillMatch?.skill?.id == "kitchen-adventure" ||
-            skillMatch?.skill?.tool != null ||
-            intent == QueryIntent.GENERAL ||
-            looksLikeScreenOrMemoryQa(question, cleanedRule)
+            (skillMatch?.skill?.tool != null && skillMatch.skill.id != "query-wikipedia" && !hasScreenOcr) ||
+            (intent == QueryIntent.GENERAL && !screenQa && !hasScreenOcr)
 
         if (cleaned.isBlank() || AskAnswerCleaner.looksLikePromptLeak(cleaned)) {
-            return if (!skillMatch?.toolResult.isNullOrBlank()) {
+            return if (!skillMatch?.toolResult.isNullOrBlank() && !hasScreenOcr) {
                 cleanedRule.copy(
                     text = AskAnswerCleaner.cleanForDisplay(skillMatch!!.toolResult!!),
                     usedLocalModel = false,
@@ -87,8 +89,13 @@ class SmritiAnswerComposer(
             return cleanedRule.copy(usedLocalModel = false, modelName = null)
         }
 
-        // Soft leak check still applies for relaxed GENERAL / screen Q&A.
+        // Soft leak check still applies for relaxed GENERAL.
         if (relaxGrounding && !passesGroundingCheck(cleaned, cleanedRule, QueryIntent.GENERAL)) {
+            return cleanedRule.copy(usedLocalModel = false, modelName = null)
+        }
+
+        // Screen answers must overlap the latest clip / rule text — otherwise keep the rule dump.
+        if ((screenQa || hasScreenOcr) && !overlapsScreenFacts(cleaned, cleanedRule)) {
             return cleanedRule.copy(usedLocalModel = false, modelName = null)
         }
 
@@ -103,15 +110,52 @@ class SmritiAnswerComposer(
         private fun looksLikeScreenOrMemoryQa(question: String, ruleAnswer: SmritiAnswer): Boolean {
             val q = question.lowercase()
             if (q.contains("screen") || q.contains("clip") || q.contains("recording") ||
-                q.contains("ocr") || q.contains("what was") || q.contains("what did")
+                q.contains("ocr") || q.contains("what was") || q.contains("what did") ||
+                q.contains("what game") || q.contains("which game") ||
+                (q.contains("game") && q.contains("open"))
             ) {
                 return true
             }
             return ruleAnswer.relatedEvents.any {
                 it.source.equals("SMRITI_PLAY", true) ||
+                    it.source.equals("SCREENMIND", true) ||
+                    it.source.equals("OCR", true) ||
                     it.source.equals("NEURAL_CORE", true) ||
-                    it.summary.contains("Seen on screen", ignoreCase = true)
+                    it.summary.contains("Seen on screen", ignoreCase = true) ||
+                    it.summary.contains("ScreenMind", ignoreCase = true) ||
+                    it.summary.contains("Game/App opened", ignoreCase = true)
             }
+        }
+
+        /** Require at least one token from SCREEN_OCR / related screen summaries. */
+        private fun overlapsScreenFacts(modelText: String, ruleAnswer: SmritiAnswer): Boolean {
+            val ocr = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr
+            val hay = buildString {
+                append(ocr)
+                append('\n')
+                append(ruleAnswer.text)
+                ruleAnswer.relatedEvents.forEach { append('\n').append(it.summary) }
+            }.lowercase()
+            if (hay.isBlank()) return true
+            val tokens = Regex("[a-z0-9]{3,}")
+                .findAll(modelText.lowercase())
+                .map { it.value }
+                .filterNot {
+                    it in setOf(
+                        "the", "and", "you", "your", "from", "with", "that", "this", "have",
+                        "was", "were", "are", "for", "not", "did", "what", "game", "app",
+                        "opened", "screen", "clip", "memory", "latest", "recording"
+                    )
+                }
+                .distinct()
+                .take(24)
+                .toList()
+            if (tokens.isEmpty()) return true
+            val hits = tokens.count { hay.contains(it) }
+            // If OCR names an app (e.g. BGMI), at least one distinctive token should appear.
+            return hits >= 1 || modelText.lowercase().contains("don't have") ||
+                modelText.lowercase().contains("do not have") ||
+                modelText.lowercase().contains("no record")
         }
 
         /**

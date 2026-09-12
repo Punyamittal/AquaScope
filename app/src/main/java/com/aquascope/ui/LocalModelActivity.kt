@@ -181,6 +181,7 @@ class LocalModelActivity : SmritiScreenActivity() {
         }
 
         bindOllamaControls()
+        bindScreenMindControls()
 
         inflateDownloadCards()
         inflateSkillToggles()
@@ -677,6 +678,37 @@ class LocalModelActivity : SmritiScreenActivity() {
             }
         }
         refreshSpeechStatus()
+    }
+
+    private fun bindScreenMindControls() {
+        val prefs = com.aquascope.smriti.brain.screenmind.ScreenMindPreferences(this)
+        binding.switchScreenMind.isChecked = prefs.enabled
+        binding.switchScreenMindPc.isChecked = prefs.pcEnabled
+        binding.inputScreenMindPcUrl.setText(prefs.pcBaseUrl)
+        binding.switchScreenMind.setOnCheckedChangeListener { _, checked ->
+            prefs.enabled = checked
+            Toast.makeText(
+                this,
+                if (checked) "ScreenMind ON for Neural Core Capture / Mind" else "ScreenMind OFF",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        binding.switchScreenMindPc.setOnCheckedChangeListener { _, checked ->
+            prefs.pcEnabled = checked
+            prefs.pcBaseUrl = binding.inputScreenMindPcUrl.text?.toString().orEmpty()
+            binding.inputScreenMindPcUrl.setText(prefs.pcBaseUrl)
+            Toast.makeText(
+                this,
+                if (checked) "PC ScreenMind ON · ${prefs.pcBaseUrl}" else "PC ScreenMind OFF",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        binding.inputScreenMindPcUrl.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                prefs.pcBaseUrl = binding.inputScreenMindPcUrl.text?.toString().orEmpty()
+                binding.inputScreenMindPcUrl.setText(prefs.pcBaseUrl)
+            }
+        }
     }
 
     private fun inflateOllamaModelChips(selectedTag: String) {

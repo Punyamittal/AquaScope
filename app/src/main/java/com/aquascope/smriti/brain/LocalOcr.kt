@@ -13,11 +13,14 @@ import com.aquascope.smriti.SmritiCore
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -25,8 +28,26 @@ import java.util.concurrent.TimeUnit
 
 object LocalOcr {
     private const val TAG = "LocalOcr"
-    private const val OCR_TIMEOUT_MS = 45_000L
-    private const val GEMMA_OCR_TIMEOUT_MS = 120_000L
+    private const val MLKIT_PER_SCRIPT_MS = 25_000L
+    private const val GEMMA_OCR_TIMEOUT_MS = 90_000L
+    private const val MAX_OCR_SIDE = 1920
+
+    @Volatile private var latinClient: TextRecognizer? = null
+    @Volatile private var devanagariClient: TextRecognizer? = null
+    private val clientLock = Any()
+
+    private fun latin(): TextRecognizer =
+        latinClient ?: synchronized(clientLock) {
+            latinClient ?: TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                .also { latinClient = it }
+        }
+
+    private fun devanagari(): TextRecognizer =
+        devanagariClient ?: synchronized(clientLock) {
+            devanagariClient
+                ?: TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
+                    .also { devanagariClient = it }
+        }
 
     /**
      * Copy a picker URI into app cache **while the temporary read grant is still valid**.
@@ -47,18 +68,16 @@ object LocalOcr {
     }
 
     suspend fun readFile(file: File, context: Context? = null): String = withContext(Dispatchers.IO) {
-        withTimeout(GEMMA_OCR_TIMEOUT_MS) {
-            val bitmap = decodeFile(file)
-                ?: throw IllegalStateException("Could not decode image (use PNG/JPG)")
-            try {
-                if (context != null) {
-                    readBitmap(context, bitmap)
-                } else {
-                    recognizeMlKit(bitmap)
-                }
-            } finally {
-                if (!bitmap.isRecycled) bitmap.recycle()
+        val bitmap = decodeFile(file)
+            ?: throw IllegalStateException("Could not decode image (use PNG/JPG/WebP)")
+        try {
+            if (context != null) {
+                readBitmap(context, bitmap)
+            } else {
+                recognizeMlKit(bitmap)
             }
+        } finally {
+            if (!bitmap.isRecycled) bitmap.recycle()
         }
     }
 
@@ -76,36 +95,47 @@ object LocalOcr {
                 cached.delete()
             }
         }
-        withTimeout(GEMMA_OCR_TIMEOUT_MS) {
-            val bitmap = decodeBitmap(context.applicationContext, uri)
-                ?: throw IllegalStateException("Could not open the selected image")
-            try {
-                readBitmap(context, bitmap)
-            } finally {
-                if (!bitmap.isRecycled) bitmap.recycle()
-            }
+        val bitmap = decodeBitmap(context.applicationContext, uri)
+            ?: throw IllegalStateException("Could not open the selected image")
+        try {
+            readBitmap(context, bitmap)
+        } finally {
+            if (!bitmap.isRecycled) bitmap.recycle()
         }
     }
 
     /**
-     * Prefer Gemma 4 vision via Ollama when enabled; always keep ML Kit as fallback / merge.
+     * Prefer Gemma 4 vision via Ollama when enabled; always keep ML Kit as fallback.
+     * ML Kit and Gemma use separate timeouts so a slow/unreachable Ollama cannot
+     * cancel a successful on-device OCR result.
      */
-    suspend fun readBitmap(context: Context, bitmap: Bitmap): String = withContext(Dispatchers.Default) {
-        withTimeout(GEMMA_OCR_TIMEOUT_MS) {
-            val mlKit = runCatching { recognizeMlKit(bitmap) }.getOrDefault("")
-            val gemma = runCatching { recognizeGemma(context, bitmap) }.getOrNull().orEmpty()
+    suspend fun readBitmap(context: Context, bitmap: Bitmap): String = withContext(Dispatchers.IO) {
+        val work = scaleForOcr(bitmap)
+        try {
+            val mlKit = runCatching { recognizeMlKit(work) }.getOrDefault("")
+            val gemma = withTimeoutOrNull(GEMMA_OCR_TIMEOUT_MS) {
+                runCatching { recognizeGemma(context, work) }.getOrNull()
+            }.orEmpty()
             when {
                 gemma.isNotBlank() && mlKit.isNotBlank() ->
                     if (gemma.length >= mlKit.length / 2) gemma else mergeUnique(listOf(gemma, mlKit))
                 gemma.isNotBlank() -> gemma
-                else -> mlKit
+                mlKit.isNotBlank() -> mlKit
+                else -> ""
             }
+        } finally {
+            if (work !== bitmap && !work.isRecycled) work.recycle()
         }
     }
 
     /** ML Kit only — used when context is unavailable. */
-    suspend fun readBitmap(bitmap: Bitmap): String = withContext(Dispatchers.Default) {
-        withTimeout(OCR_TIMEOUT_MS) { recognizeMlKit(bitmap) }
+    suspend fun readBitmap(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
+        val work = scaleForOcr(bitmap)
+        try {
+            recognizeMlKit(work)
+        } finally {
+            if (work !== bitmap && !work.isRecycled) work.recycle()
+        }
     }
 
     private suspend fun recognizeGemma(context: Context, bitmap: Bitmap): String? {
@@ -147,7 +177,18 @@ object LocalOcr {
         }
     }
 
-    private fun decodeFile(file: File): Bitmap? {
+    private fun scaleForOcr(src: Bitmap): Bitmap {
+        if (src.width <= MAX_OCR_SIDE && src.height <= MAX_OCR_SIDE) return src
+        val scale = MAX_OCR_SIDE.toFloat() / maxOf(src.width, src.height)
+        return Bitmap.createScaledBitmap(
+            src,
+            (src.width * scale).toInt().coerceAtLeast(1),
+            (src.height * scale).toInt().coerceAtLeast(1),
+            true
+        )
+    }
+
+    fun decodeFile(file: File): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
@@ -155,9 +196,18 @@ object LocalOcr {
                 return try {
                     val src = ImageDecoder.createSource(file)
                     softwareBitmap(
-                        ImageDecoder.decodeBitmap(src) { decoder, _, _ ->
+                        ImageDecoder.decodeBitmap(src) { decoder, info, _ ->
                             decoder.isMutableRequired = false
                             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                            val w = info.size.width
+                            val h = info.size.height
+                            if (w > MAX_OCR_SIDE || h > MAX_OCR_SIDE) {
+                                val scale = MAX_OCR_SIDE.toFloat() / maxOf(w, h)
+                                decoder.setTargetSize(
+                                    (w * scale).toInt().coerceAtLeast(1),
+                                    (h * scale).toInt().coerceAtLeast(1)
+                                )
+                            }
                         }
                     )
                 } catch (t: Throwable) {
@@ -168,19 +218,28 @@ object LocalOcr {
             return null
         }
         val opts = BitmapFactory.Options().apply {
-            inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, 1920, 1920)
+            inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, MAX_OCR_SIDE, MAX_OCR_SIDE)
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        return BitmapFactory.decodeFile(file.absolutePath, opts)
+        return BitmapFactory.decodeFile(file.absolutePath, opts)?.let { softwareBitmap(it) }
     }
 
     private fun decodeBitmap(context: Context, uri: Uri): Bitmap? {
         return try {
             val decoded = if (Build.VERSION.SDK_INT >= 28) {
                 val source = ImageDecoder.createSource(context.contentResolver, uri)
-                ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
                     decoder.isMutableRequired = false
                     decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    val w = info.size.width
+                    val h = info.size.height
+                    if (w > MAX_OCR_SIDE || h > MAX_OCR_SIDE) {
+                        val scale = MAX_OCR_SIDE.toFloat() / maxOf(w, h)
+                        decoder.setTargetSize(
+                            (w * scale).toInt().coerceAtLeast(1),
+                            (h * scale).toInt().coerceAtLeast(1)
+                        )
+                    }
                 }
             } else {
                 context.contentResolver.openInputStream(uri)?.use { stream ->
@@ -217,36 +276,33 @@ object LocalOcr {
         return inSampleSize.coerceAtLeast(1)
     }
 
-    private fun recognizeMlKit(bitmap: Bitmap): String {
-        val image = InputImage.fromBitmap(bitmap, 0)
-        val chunks = ArrayList<String>(2)
-        runRecognizer("latin", TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS), image, chunks)
-        runRecognizer(
-            "devanagari",
-            TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build()),
-            image,
-            chunks
-        )
-        return mergeUnique(chunks)
+    private suspend fun recognizeMlKit(bitmap: Bitmap): String = coroutineScope {
+        val latinJob = async(Dispatchers.IO) {
+            runRecognizer("latin", latin(), InputImage.fromBitmap(bitmap, 0))
+        }
+        val devaJob = async(Dispatchers.IO) {
+            runRecognizer("devanagari", devanagari(), InputImage.fromBitmap(bitmap, 0))
+        }
+        mergeUnique(listOfNotNull(latinJob.await(), devaJob.await()))
     }
 
     private fun runRecognizer(
         label: String,
-        client: com.google.mlkit.vision.text.TextRecognizer,
-        image: InputImage,
-        out: MutableList<String>
-    ) {
-        try {
-            val result = Tasks.await(client.process(image), OCR_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        client: TextRecognizer,
+        image: InputImage
+    ): String? {
+        return try {
+            val result = Tasks.await(client.process(image), MLKIT_PER_SCRIPT_MS, TimeUnit.MILLISECONDS)
             val text = result.text.orEmpty().trim()
             if (text.isNotBlank()) {
-                out.add(text)
                 Log.i(TAG, "$label OCR chars=${text.length}")
+                text
+            } else {
+                null
             }
         } catch (t: Throwable) {
             Log.w(TAG, "$label OCR failed: ${t.message}")
-        } finally {
-            runCatching { client.close() }
+            null
         }
     }
 

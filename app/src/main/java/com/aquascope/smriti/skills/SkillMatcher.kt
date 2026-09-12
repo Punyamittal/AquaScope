@@ -34,7 +34,15 @@ object SkillMatcher {
             "leak-explainer" -> if (hasAny(q, "leak", "drip", "pipe", "water sound", "plumbing")) s += 8
             "guardian-digest" -> if (hasAny(q, "guardian", "ir blaster", "kitchen alert", "ambient")) s += 8
             "home-memory-brief" -> if (hasAny(q, "brief", "status", "what's going", "what is going", "home memory", "summar")) s += 6
-            "query-wikipedia" -> if (hasAny(q, "who is", "what is", "wikipedia", "tell me about", "history of")) s += 5
+            "query-wikipedia" -> {
+                // "what is on my screen" / "what game" must not hit Wikipedia.
+                val screenish = hasAny(
+                    q, "screen", "clip", "recording", "game", "app opened", "on my phone", "ocr"
+                )
+                if (!screenish && hasAny(q, "who is", "what is", "wikipedia", "tell me about", "history of")) {
+                    s += 5
+                }
+            }
             "calculate-hash" -> if (hasAny(q, "hash", "sha256", "sha-256", "checksum")) s += 10
             "send-email" -> if (hasAny(q, "email", "send mail", "compose mail", "e-mail")) s += 10
             "kitchen-adventure" -> if (hasAny(q, "adventure", "dungeon", "quest")) s += 4

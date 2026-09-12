@@ -107,7 +107,7 @@ class WhisperSttEngine(
             val t = interpreter.getInputTensorFromSignature(name, "decode")
             val shape = t.shape()
             if (shape.size == 2 && shape[1] == maxTokens) {
-                return if (t.dataType().name().contains("INT64")) 8 else 4
+                return if (t.dataType().name.contains("INT64")) 8 else 4
             }
         }
         return 4

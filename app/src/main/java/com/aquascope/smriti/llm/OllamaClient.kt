@@ -137,6 +137,69 @@ class OllamaClient(
         }
     }
 
+    /**
+     * ScreenMind-style structured vision analysis (JSON). Uses the OCR/vision model.
+     */
+    suspend fun screenMindAnalyze(
+        jpegBase64: String,
+        ocrContext: String = ""
+    ): Result<com.aquascope.smriti.brain.screenmind.ScreenMindRecord> = withContext(Dispatchers.IO) {
+        runCatching {
+            require(jpegBase64.isNotBlank()) { "Empty image" }
+            require(prefs.ocrEnabled) { "Enable Gemma OCR in System for ScreenMind vision" }
+            val base = OllamaPreferences.normalizeBaseUrl(prefs.baseUrl)
+            val model = resolveOcrModelTagSync(base)
+            val prompt = buildString {
+                append(
+                    """Analyze this phone screenshot. Return ONLY a JSON object:
+{"app_name":"main app visible","activity_category":"ONE of: coding, browsing, communication, writing, design, media, terminal, meeting, idle, gaming, other","activity_summary":"one specific sentence about what the user is doing","detailed_context":"2-3 sentences with specifics","visible_text_snippets":["up to 8 key text items"],"mood":"ONE of: productive, distracted, collaborative, learning, neutral","confidence":0.85,"scene_description":"DETAILED inventory of everything visible"}
+Rules: activity_category MUST be one of the listed values. Do NOT invent unread text."""
+                )
+                if (ocrContext.isNotBlank()) {
+                    append("\n\nOCR context (may be partial):\n")
+                    append(ocrContext.take(1_200))
+                }
+            }
+            val raw = ocrViaOllamaChat(base, model, prompt, jpegBase64)
+                ?: error("ScreenMind vision returned nothing from $model")
+            com.aquascope.smriti.brain.screenmind.ScreenMindAnalyzer.parseJson(raw, ocrContext)
+                ?: error("ScreenMind JSON parse failed")
+        }
+    }
+
+    /**
+     * Gemma 4 vision summary for PEACE / Capture highlight clips — categorize + summarize for main memory.
+     */
+    suspend fun summarizeHighlightClip(
+        jpegBase64: String,
+        ocrContext: String = "",
+        triggerReason: String = "clip"
+    ): Result<com.aquascope.smriti.brain.screenmind.ScreenMindRecord> = withContext(Dispatchers.IO) {
+        runCatching {
+            require(jpegBase64.isNotBlank()) { "Empty image" }
+            require(prefs.ocrEnabled) { "Enable Gemma OCR in System → Local model for clip summaries" }
+            val base = OllamaPreferences.normalizeBaseUrl(prefs.baseUrl)
+            val model = resolveOcrModelTagSync(base)
+            val prompt = buildString {
+                append(
+                    """This is a frame from an automatic gameplay/highlight clip (PEACE-style kill-feed capture).
+Trigger: $triggerReason
+Return ONLY a JSON object:
+{"app_name":"game or app name","activity_category":"ONE of: gaming, media, browsing, communication, other","activity_summary":"one clear sentence summarizing this highlight for memory search","detailed_context":"2-3 sentences: what happened, who/what is on screen, why it was clipped","visible_text_snippets":["up to 8 UI / kill-feed / score strings"],"mood":"ONE of: productive, distracted, collaborative, learning, neutral","confidence":0.85,"scene_description":"inventory of HUD, kill feed, score, characters"}
+Prefer activity_category=gaming when this looks like a match, kill, victory, or scoreboard. Be specific so Ask can find this clip later. Do NOT invent unread text."""
+                )
+                if (ocrContext.isNotBlank()) {
+                    append("\n\nOCR context:\n")
+                    append(ocrContext.take(1_500))
+                }
+            }
+            val raw = ocrViaOllamaChat(base, model, prompt, jpegBase64)
+                ?: error("Gemma clip summary returned nothing from $model")
+            com.aquascope.smriti.brain.screenmind.ScreenMindAnalyzer.parseJson(raw, ocrContext)
+                ?: error("Gemma clip JSON parse failed")
+        }
+    }
+
     private fun resolveOcrModelTagSync(base: String): String {
         val wanted = prefs.ocrModel.trim().ifBlank { OllamaPreferences.DEFAULT_OCR_MODEL }
         val names = runCatching {

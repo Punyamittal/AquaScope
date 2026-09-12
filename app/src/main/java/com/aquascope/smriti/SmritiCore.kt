@@ -286,28 +286,68 @@ class SmritiCore(context: Context) {
         val query = retrieval.parse(question)
         var retrieved = retrieval.retrieve(query)
         retrieved = boostWithLatestScreenOcr(query, retrieved)
-        retrieved = boostWithNeuralEpisodes(neuralEpisodes, retrieved)
+        val screenPinned = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr.isNotBlank() ||
+            query.locationHint == "screen"
+        val episodesForBoost = if (screenPinned) {
+            neuralEpisodes.filter {
+                it.source.equals("SCREENMIND", true) ||
+                    it.source.equals("SMRITI_PLAY", true) ||
+                    it.source.equals("OCR", true) ||
+                    it.body.contains("ScreenMind", true) ||
+                    it.body.contains("Game/App opened", true) ||
+                    it.body.contains("Seen on screen", true)
+            }.ifEmpty { emptyList() }
+        } else {
+            neuralEpisodes
+        }
+        retrieved = boostWithNeuralEpisodes(episodesForBoost, retrieved)
+        // Keep latest clip first after neural merge.
+        if (screenPinned) {
+            retrieved = boostWithLatestScreenOcr(query, retrieved)
+        }
         var ruleAnswer = reasoning.answer(query, retrieved)
         // Neural Core SQLite hits must always ground the rule answer so Qwen sees them.
-        if (neuralEpisodes.isNotEmpty() &&
+        if (episodesForBoost.isNotEmpty() &&
             (ruleAnswer.evidenceState == EvidenceState.UNKNOWN || ruleAnswer.relatedEvents.isEmpty())
         ) {
-            ruleAnswer = neuralMemoryRuleAnswer(neuralEpisodes)
-        } else if (neuralEpisodes.isNotEmpty()) {
-            val neuralEvents = neuralEpisodesToEvents(neuralEpisodes)
+            ruleAnswer = neuralMemoryRuleAnswer(episodesForBoost)
+        } else if (episodesForBoost.isNotEmpty() && !screenPinned) {
+            val neuralEvents = neuralEpisodesToEvents(episodesForBoost)
             ruleAnswer = ruleAnswer.copy(
                 relatedEvents = (neuralEvents + ruleAnswer.relatedEvents)
                     .distinctBy { it.id }
                     .take(8),
                 evidenceState = EvidenceState.OBSERVED
             )
+        } else if (episodesForBoost.isNotEmpty() && screenPinned) {
+            // Append screen neural hits after the pinned clip — don't bury it.
+            val neuralEvents = neuralEpisodesToEvents(episodesForBoost.take(2))
+            ruleAnswer = ruleAnswer.copy(
+                relatedEvents = (ruleAnswer.relatedEvents + neuralEvents)
+                    .distinctBy { it.id }
+                    .take(3),
+                evidenceState = EvidenceState.OBSERVED
+            )
         }
 
         val enabledSkills = skillCatalog.enabled(skillPrefs)
-        val matched = SkillMatcher.match(question, enabledSkills)
+        val hasScreenCtx = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr.isNotBlank() ||
+            query.locationHint == "screen" ||
+            retrieved.any {
+                it.source.equals("SCREENMIND", true) ||
+                    it.source.equals("SMRITI_PLAY", true) ||
+                    it.source.equals("OCR", true)
+            }
+        // Screen/clip questions must stay grounded in OCR — skip world-knowledge skills.
+        val skillsForMatch = if (hasScreenCtx) {
+            enabledSkills.filterNot { it.id == "query-wikipedia" }
+        } else {
+            enabledSkills
+        }
+        val matched = SkillMatcher.match(question, skillsForMatch)
         val toolResult = matched?.let { runCatching { skillTools.run(it, question) }.getOrNull() }
         val skillMatch = matched?.let { SkillMatch(it, toolResult) }
-        val catalogBlurb = SkillPromptInjector.catalogBlurb(enabledSkills.take(8))
+        val catalogBlurb = SkillPromptInjector.catalogBlurb(skillsForMatch.take(8))
 
         if (!allowLocalLlm || !llmPrefs.enabled) {
             if (!toolResult.isNullOrBlank()) {
@@ -356,8 +396,8 @@ class SmritiCore(context: Context) {
     fun llmFailureHint(): String? = isolatedLlm.lastFailure()
 
     /**
-     * Prefer the freshest Stop/Clip / gallery OCR so Qwen can answer about on-screen text.
-     * Inject whenever OCR is present — not only when the question says “screen”.
+     * Always pin the freshest Clip/OCR at the front. Older SCREENMIND rows must not
+     * block injection — that caused Ask to answer from unrelated past clips.
      */
     private fun boostWithLatestScreenOcr(
         @Suppress("UNUSED_PARAMETER") query: com.aquascope.smriti.model.MemoryQuery,
@@ -365,31 +405,40 @@ class SmritiCore(context: Context) {
     ): List<PhysicalEvent> {
         val ocr = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr.trim()
         if (ocr.isBlank()) return retrieved
-        val already = retrieved.any {
-            it.source.equals("SMRITI_PLAY", true) ||
-                it.source.equals("OCR", true) ||
-                it.summary.contains(ocr.take(80), ignoreCase = true) ||
-                it.summary.contains("Seen on screen", ignoreCase = true)
+        val path = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcrPath
+        val sameLatest = retrieved.any { ev ->
+            ev.id == "screen-ocr-latest" ||
+                (!path.isNullOrBlank() && ev.evidenceNotes.any { it.contains(path) }) ||
+                ev.summary.contains(ocr.take(120), ignoreCase = true)
         }
-        if (already) return retrieved
+        val withoutDup = retrieved.filterNot { it.id == "screen-ocr-latest" }
+        if (sameLatest) {
+            val hit = withoutDup.firstOrNull {
+                (!path.isNullOrBlank() && it.evidenceNotes.any { n -> n.contains(path) }) ||
+                    it.summary.contains(ocr.take(120), ignoreCase = true)
+            }
+            return if (hit != null) {
+                listOf(hit) + withoutDup.filterNot { it.id == hit.id }
+            } else {
+                withoutDup
+            }
+        }
         val synthetic = PhysicalEvent(
             id = "screen-ocr-latest",
             timestampMs = System.currentTimeMillis(),
             locationId = "screen",
-            locationLabel = "Screen / OCR",
+            locationLabel = "ScreenMind",
             objectId = "screen",
-            objectLabel = "Latest OCR",
+            objectLabel = "Latest screen memory",
             eventType = EventType.UNKNOWN,
             anomalyScore = 0.0,
             confidence = 1.0,
             baselineId = null,
-            summary = "Latest OCR\nSeen on screen:\n${ocr.take(1_500)}",
-            source = "SMRITI_PLAY",
-            evidenceNotes = listOfNotNull(
-                com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcrPath?.let { "OCR file: $it" }
-            )
+            summary = "Latest ScreenMind\n$ocr".take(2_000),
+            source = "SCREENMIND",
+            evidenceNotes = listOfNotNull(path?.let { "OCR file: $it" })
         )
-        return listOf(synthetic) + retrieved
+        return listOf(synthetic) + withoutDup
     }
 
     /** Feed Neural Core SQLite hits into retrieval so Qwen rephrases them. */
@@ -400,7 +449,10 @@ class SmritiCore(context: Context) {
         if (episodes.isEmpty()) return retrieved
         val neural = neuralEpisodesToEvents(episodes)
         val known = retrieved.map { it.id }.toHashSet()
-        return neural.filter { it.id !in known } + retrieved
+        val fresh = neural.filter { it.id !in known }
+        // Never put neural hits ahead of the pinned latest clip.
+        val (pinned, rest) = retrieved.partition { it.id == "screen-ocr-latest" }
+        return pinned + fresh + rest
     }
 
     private fun neuralEpisodesToEvents(

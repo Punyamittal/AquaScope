@@ -85,8 +85,49 @@ class SmritiMemoryEngine(context: Context) {
                 scored[rec.id] = rec.copy(score = best)
             }
         }
-        val ranked = scored.values.sortedByDescending { it.score }.take(limit)
-            .filter { it.score >= COSINE_FLOOR || it.body.contains(q, ignoreCase = true) }
+        // Game / screen questions: always surface recent ScreenMind clips even if FTS misses.
+        val ql = q.lowercase(java.util.Locale.getDefault())
+        val hasFreshClip = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr.isNotBlank()
+        val wantsScreen = hasFreshClip || ql.contains("game") || ql.contains("screen") ||
+            ql.contains("clip") || ql.contains("recording") || ql.contains("on screen") ||
+            ql.contains("peace") || ql.contains("highlight") || ql.contains("kill") ||
+            (ql.contains("app") && (ql.contains("open") || ql.contains("opened")))
+        if (wantsScreen) {
+            hot.asSequence()
+                .map { it.first }
+                .filter {
+                    it.source.equals("SCREENMIND", true) ||
+                        it.source.equals("SMRITI_PLAY", true) ||
+                        it.source.equals("PEACE", true) ||
+                        it.source.equals("OCR", true) ||
+                        it.kind == TaxonomyParser.Kind.GAME ||
+                        it.body.contains("ScreenMind", true) ||
+                        it.body.contains("PEACE", true) ||
+                        it.body.contains("Game/App opened", true)
+                }
+                .sortedByDescending { it.timestampMs }
+                .take(if (hasFreshClip) 2 else 4)
+                .forEachIndexed { index, rec ->
+                    val boost = if (index == 0) 0.98f else 0.72f
+                    val prev = scored[rec.id]
+                    scored[rec.id] = rec.copy(score = maxOf(prev?.score ?: 0f, boost))
+                }
+        }
+        val ranked = scored.values
+            .sortedWith(compareByDescending<EpisodeRecord> { it.score }.thenByDescending { it.timestampMs })
+            .take(limit)
+            .filter {
+                it.score >= COSINE_FLOOR ||
+                    it.body.contains(q, ignoreCase = true) ||
+                    (wantsScreen && (
+                        it.source.equals("SCREENMIND", true) ||
+                            it.source.equals("PEACE", true) ||
+                            it.kind == TaxonomyParser.Kind.GAME ||
+                            it.body.contains("ScreenMind", true) ||
+                            it.body.contains("PEACE", true) ||
+                            it.body.contains("Game/App opened", true)
+                        ))
+            }
         if (ranked.isEmpty()) {
             RecallResult(false, NO_RECORD, emptyList())
         } else {
@@ -123,10 +164,14 @@ class SmritiMemoryEngine(context: Context) {
 
     fun clipsDir(): File = clipsDir
 
-    fun trimClipStorage(maxBytes: Long = MAX_CLIP_BYTES) {
-        val files = clipsDir.listFiles()?.sortedBy { it.lastModified() }.orEmpty()
-        var total = files.sumOf { it.length() }
-        for (f in files) {
+    fun trimClipStorage(maxBytes: Long = MAX_CLIP_BYTES, keepNewest: File? = null) {
+        val keepPath = keepNewest?.absolutePath
+        val all = clipsDir.listFiles()?.toList().orEmpty()
+        var total = all.sumOf { it.length() }
+        val victims = all
+            .filter { keepPath == null || it.absolutePath != keepPath }
+            .sortedBy { it.lastModified() }
+        for (f in victims) {
             if (total <= maxBytes) break
             total -= f.length()
             f.delete()

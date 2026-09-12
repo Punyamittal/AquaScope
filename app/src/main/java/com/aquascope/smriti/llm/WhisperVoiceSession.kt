@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Record mic audio and transcribe with on-device Whisper Tiny.
+ * Never uses Google / system speech recognition.
  */
 object WhisperVoiceSession {
 
@@ -23,13 +24,15 @@ object WhisperVoiceSession {
         context: Context,
         modelFile: File,
         seconds: Int = 6,
-        languageTag: String? = Locale.getDefault().toLanguageTag()
+        languageTag: String? = Locale.getDefault().toLanguageTag(),
+        onRecordingFinished: (() -> Unit)? = null
     ): Result<String> = runCatching {
         val pcm = recordPcm16(seconds)
+        onRecordingFinished?.invoke()
         if (pcm.isEmpty()) error("No audio captured")
         val engine = obtainEngine(context, modelFile)
         val text = engine.transcribe(pcm, languageTag)
-        if (text.isBlank()) error("Whisper heard silence")
+        if (text.isBlank()) error("Whisper heard silence — speak closer to the mic")
         text
     }
 

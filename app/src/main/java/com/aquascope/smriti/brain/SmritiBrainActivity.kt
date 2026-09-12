@@ -8,21 +8,23 @@ import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.speech.RecognizerIntent
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.aquascope.R
 import com.aquascope.databinding.ActivitySmritiBrainBinding
 import com.aquascope.smriti.SmritiCore
 import com.aquascope.smriti.llm.SpeechLanguage
 import com.aquascope.smriti.llm.WhisperVoiceSession
+import com.aquascope.ui.LocalModelActivity
 import com.aquascope.ui.SmritiNav
 import com.aquascope.ui.SmritiScreenActivity
 import kotlinx.coroutines.Dispatchers
@@ -37,13 +39,31 @@ class SmritiBrainActivity : SmritiScreenActivity() {
     private val vm: BrainViewModel by viewModels()
     private lateinit var smriti: SmritiCore
 
+    private fun openClipEvidence(path: String) {
+        val file = File(path)
+        if (!file.exists()) {
+            Toast.makeText(this, "Clip file missing — capture again", Toast.LENGTH_LONG).show()
+            return
+        }
+        try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, if (path.endsWith(".mp4", true)) "video/mp4" else "*/*")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(intent, "Play clip"))
+        } catch (t: Throwable) {
+            Log.w(TAG, "open clip: ${t.message}")
+            Toast.makeText(this, "Could not open clip: ${t.message}", Toast.LENGTH_LONG).show()
+        }
+    }
     private val micPerm = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { ok -> if (ok) vm.toggleGuardian(true) }
 
     private val speakMicPerm = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { ok -> if (ok) startSpeakCapture() }
+    ) { ok -> if (ok) startWhisperOnlySpeak() }
 
     private val notifPerm = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -76,15 +96,6 @@ class SmritiBrainActivity : SmritiScreenActivity() {
         vm.armPlay(result.resultCode, result.data!!, metrics.widthPixels, metrics.heightPixels, metrics.densityDpi)
     }
 
-    private val voice = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-        if (!spoken.isNullOrBlank()) {
-            handleSpokenQuery(spoken)
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
@@ -112,8 +123,13 @@ class SmritiBrainActivity : SmritiScreenActivity() {
                             else vm.toggleGuardian(false)
                         },
                         onIr = vm::setIr,
+                        onScreenMind = vm::setScreenMind,
+                        onScreenMindPc = vm::setScreenMindPc,
+                        onSwipeOcr = { on -> ensureSwipeOcr(on) },
+                        onOpenLibrary = {
+                            startActivity(Intent(this@SmritiBrainActivity, ScreenLibraryActivity::class.java))
+                        },
                         onArmPlay = {
-                            // Screen capture / OCR does not need the mic — only MediaProjection consent.
                             val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
                             projection.launch(mgr.createScreenCaptureIntent())
                         },
@@ -129,6 +145,7 @@ class SmritiBrainActivity : SmritiScreenActivity() {
                                 vm.setQuery("")
                             }
                         },
+                        onOpenEvidence = { path -> openClipEvidence(path) },
                         onClose = { finish() }
                     )
                 }
@@ -155,77 +172,99 @@ class SmritiBrainActivity : SmritiScreenActivity() {
         super.onDestroy()
     }
 
+    /** Speak is Whisper-only — never Google / system speech recognition. */
     private fun requestSpeak() {
         val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
-        if (granted) startSpeakCapture() else speakMicPerm.launch(Manifest.permission.RECORD_AUDIO)
+        if (granted) startWhisperOnlySpeak() else speakMicPerm.launch(Manifest.permission.RECORD_AUDIO)
     }
 
-    private fun startSpeakCapture() {
+    private fun startWhisperOnlySpeak() {
         val whisper = smriti.modelStore.findWhisperInstalled()
-        if (whisper != null) {
-            startWhisperSpeak(whisper)
-        } else {
-            Toast.makeText(
-                this,
-                "Download Whisper on System for on-device Speak — using phone STT for now",
-                Toast.LENGTH_LONG
-            ).show()
-            launchSystemVoice()
+        if (whisper == null) {
+            promptInstallWhisper()
+            return
         }
-    }
-
-    private fun startWhisperSpeak(modelFile: File) {
         vm.setListening()
-        Toast.makeText(this, "Listening with Whisper… speak now", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Whisper listening… speak now (6s)", Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 WhisperVoiceSession.transcribe(
                     context = this@SmritiBrainActivity,
-                    modelFile = modelFile,
+                    modelFile = whisper,
                     seconds = 6,
-                    languageTag = Locale.getDefault().toLanguageTag()
+                    languageTag = Locale.getDefault().toLanguageTag(),
+                    onRecordingFinished = {
+                        lifecycleScope.launch(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@SmritiBrainActivity,
+                                "Whisper transcribing…",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
                 )
             }
             result.fold(
                 onSuccess = { spoken ->
-                    Toast.makeText(this@SmritiBrainActivity, "Heard: $spoken", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@SmritiBrainActivity, "Whisper: $spoken", Toast.LENGTH_SHORT).show()
                     handleSpokenQuery(spoken)
                 },
                 onFailure = { err ->
-                    Log.w(TAG, "Whisper Speak failed", err)
+                    Log.e(TAG, "Whisper Speak failed", err)
+                    vm.setListeningIdle()
                     Toast.makeText(
                         this@SmritiBrainActivity,
-                        "Whisper failed (${err.message ?: "error"}) — trying phone STT",
+                        "Whisper failed: ${err.message ?: err.javaClass.simpleName}",
                         Toast.LENGTH_LONG
                     ).show()
-                    launchSystemVoice()
                 }
             )
         }
     }
 
-    private fun launchSystemVoice() {
-        vm.setListening()
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+    private fun promptInstallWhisper() {
+        AlertDialog.Builder(this)
+            .setTitle("Whisper required")
+            .setMessage(
+                "Speak uses on-device Whisper only (not Google speech).\n\n" +
+                    "Open System and download Whisper Tiny, then try Speak again."
             )
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Ask SMRITI")
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
+            .setPositiveButton("Open System") { _, _ ->
+                startActivity(Intent(this, LocalModelActivity::class.java))
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun ensureSwipeOcr(on: Boolean) {
+        if (!on) {
+            vm.setSwipeOcr(false)
+            return
         }
-        try {
-            voice.launch(intent)
-        } catch (_: Exception) {
+        if (!SmritiOcrAccessService.isEnabled(this)) {
             Toast.makeText(
-                this@SmritiBrainActivity,
-                "Voice unavailable — type and tap Ask",
-                Toast.LENGTH_SHORT
+                this,
+                "Enable Accessibility → SMRITI OCR Capture",
+                Toast.LENGTH_LONG
             ).show()
-            vm.recall()
+            runCatching {
+                startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            return
         }
+        if (!SmritiOcrAccessService.isConnected()) {
+            Toast.makeText(
+                this,
+                "Toggle SMRITI OCR Capture OFF then ON, then retry Swipe OCR",
+                Toast.LENGTH_LONG
+            ).show()
+            runCatching {
+                startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+            return
+        }
+        vm.setSwipeOcr(true)
     }
 
     private fun launchOcrPicker() {
@@ -244,10 +283,6 @@ class SmritiBrainActivity : SmritiScreenActivity() {
         }
     }
 
-    /**
-     * Must copy while still on the result callback — many OEMs revoke URI access
-     * as soon as we return / hop to a background thread.
-     */
     private fun startOcrFromPickerUri(uri: Uri) {
         val cached: File = try {
             LocalOcr.copyPickerUriToCache(this, uri)

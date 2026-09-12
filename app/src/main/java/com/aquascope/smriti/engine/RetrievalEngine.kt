@@ -49,6 +49,11 @@ class RetrievalEngine(
                 q.contains("screen capture") || q.contains("screen recording") ||
                 q.contains("what was on") || q.contains("from the screen") ||
                 q.contains("what did i see") || q.contains("what did you see") ||
+                q.contains("what game") || q.contains("which game") ||
+                q.contains("what app") || q.contains("which app") ||
+                (q.contains("game") && (q.contains("open") || q.contains("play") ||
+                    q.contains("launch") || q.contains("start"))) ||
+                (q.contains("app") && (q.contains("open") || q.contains("opened"))) ||
                 (q.contains("screen") && (q.contains("see") || q.contains("saw") ||
                     q.contains("show") || q.contains("text") || q.contains("read") ||
                     q.contains("ocr") || q.contains("watch") || q.contains("record"))) -> "screen"
@@ -97,8 +102,27 @@ class RetrievalEngine(
                 events.filter {
                     it.eventType == EventType.NORMAL || it.eventType == EventType.BASELINE_ESTABLISHED
                 }.sortedByDescending { it.timestampMs }.take(limit)
-            else ->
-                events.sortedByDescending { it.timestampMs }.take(limit)
+            else -> {
+                // Fresh clip in session: hard-prefer screen sources so Ask doesn't mix kitchen notes.
+                val hasFreshClip = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr.isNotBlank()
+                val ranked = if (hasFreshClip || query.locationHint == "screen") {
+                    events.sortedWith(
+                        compareByDescending<PhysicalEvent> { ev ->
+                            when {
+                                ev.source.equals("SCREENMIND", true) ||
+                                    ev.source.equals("SMRITI_PLAY", true) ||
+                                    ev.source.equals("OCR", true) -> 2
+                                ev.summary.contains("Game/App opened", true) ||
+                                    ev.summary.contains("Seen on screen", true) -> 1
+                                else -> 0
+                            }
+                        }.thenByDescending { it.timestampMs }
+                    )
+                } else {
+                    events.sortedByDescending { it.timestampMs }
+                }
+                ranked.take(limit)
+            }
         }
     }
 
@@ -124,8 +148,12 @@ class RetrievalEngine(
                     ev.summary.contains("IR armed", ignoreCase = true)
             "screen" ->
                 ev.source.equals("SMRITI_PLAY", true) ||
+                    ev.source.equals("SCREENMIND", true) ||
+                    ev.source.equals("OCR", true) ||
                     ev.summary.contains("Screen clip", ignoreCase = true) ||
-                    ev.summary.contains("Seen on screen", ignoreCase = true)
+                    ev.summary.contains("ScreenMind", ignoreCase = true) ||
+                    ev.summary.contains("Seen on screen", ignoreCase = true) ||
+                    ev.summary.contains("Game/App opened", ignoreCase = true)
             else -> false
         }
     }

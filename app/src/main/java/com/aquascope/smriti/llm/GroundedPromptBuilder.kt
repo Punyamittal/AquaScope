@@ -78,7 +78,8 @@ Answer USER_QUESTION using ONLY the facts below (CANONICAL_ANSWER + MEMORY_EVENT
 
 HARD RULES:
 - Stay faithful to those facts. Do not invent events, leaks, times, places, or scores.
-- Prefer SCREEN_OCR and MEMORY_EVENTS when answering what was seen, read, or recorded on screen.
+- Prefer SCREEN_OCR first. If SCREEN_OCR names an app/game, that is the answer for "what game/app" questions — ignore unrelated MEMORY_EVENTS.
+- Do not answer from general knowledge or Wikipedia when SCREEN_OCR is present.
 - If facts are insufficient or EVIDENCE_STATE is UNKNOWN and there is no SCREEN_OCR / MEMORY text, say you don't have that in memory yet and suggest Capture → Stop or a more specific question — unless SKILL_TOOL_RESULT has the answer.
 - Never claim a confirmed leak unless CANONICAL_ANSWER already does.
 - Be concise (under 160 words). Spoken sentences only. No markdown. No "As an AI".
@@ -110,16 +111,26 @@ ANSWER:
 
     private fun factsBlock(ruleAnswer: SmritiAnswer, events: List<PhysicalEvent>): String =
         buildString {
+            // SCREEN_OCR first so truncation / attention keep the latest clip.
+            appendScreenOcr()
             appendLine("EVIDENCE_STATE: ${ruleAnswer.evidenceState}")
             appendLine("CANONICAL_ANSWER:")
             appendLine(ruleAnswer.text.trim())
             appendLine()
-            appendScreenOcr()
-            appendLine("MEMORY_EVENTS (${events.size}):")
-            if (events.isEmpty()) {
+            val screenFirst = events.sortedByDescending { e ->
+                when {
+                    e.id == "screen-ocr-latest" -> 3
+                    e.source.equals("SCREENMIND", true) ||
+                        e.source.equals("SMRITI_PLAY", true) ||
+                        e.source.equals("OCR", true) -> 2
+                    else -> 0
+                }
+            }
+            appendLine("MEMORY_EVENTS (${screenFirst.size}):")
+            if (screenFirst.isEmpty()) {
                 appendLine("- (none)")
             } else {
-                events.take(12).forEach { e ->
+                screenFirst.take(4).forEach { e ->
                     appendLine(
                         "- ${fmt.format(Date(e.timestampMs))} at ${e.locationLabel} [${e.source}]: " +
                             eventFact(e)
@@ -152,8 +163,12 @@ ANSWER:
         // Keep more of on-screen OCR / clip text for Qwen.
         val limit = when {
             e.source.equals("SMRITI_PLAY", true) ||
+                e.source.equals("SCREENMIND", true) ||
+                e.source.equals("OCR", true) ||
                 e.source.equals("NEURAL_CORE", true) ||
-                raw.contains("Seen on screen", ignoreCase = true) -> 1_200
+                raw.contains("Seen on screen", ignoreCase = true) ||
+                raw.contains("ScreenMind", ignoreCase = true) ||
+                raw.contains("Game/App opened", ignoreCase = true) -> 1_200
             else -> 400
         }
         return cleaned.take(limit)

@@ -51,9 +51,10 @@ object NeuralCoreMemory {
     ): EpisodeRecord {
         val rec = SmritiMemoryEngine.get(context).ingest(raw, source, evidencePath, kind)
         val location = when (source) {
-            "SMRITI_PLAY" -> "Screen capture"
+            "SMRITI_PLAY", "SCREENMIND", "PEACE" -> "ScreenMind / PEACE clip"
             "IR" -> "IR blaster"
             "GUARDIAN" -> "Guardian"
+            "OCR" -> "ScreenMind OCR"
             else -> "This phone"
         }
         SmritiCore.get(context).rememberObservation(

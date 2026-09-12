@@ -242,6 +242,15 @@
                     android:visibility="gone" />
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMarkMoist"
+                    style="@style/Widget.AquaScope.Button.Secondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/mark_moist"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnViewReport"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

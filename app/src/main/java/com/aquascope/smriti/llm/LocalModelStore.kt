@@ -96,8 +96,12 @@ class LocalModelStore(context: Context) {
         recoverCompleteDownloads()
         LocalModelCatalog.downloadableSpeech.forEach { entry ->
             val f = fileFor(entry.fileName)
-            if (f.isFile && LocalModelDownloadPolicy.isCompleteEnough(f.length(), entry.sizeBytes)) {
-                return f
+            if (f.isFile && f.length() > MIN_BYTES) {
+                if (LocalModelDownloadPolicy.isCompleteEnough(f.length(), entry.sizeBytes) ||
+                    f.length() >= entry.sizeBytes * 7 / 10
+                ) {
+                    return f
+                }
             }
         }
         return listModelFiles().firstOrNull { isSpeechAsset(it.name) && it.length() > MIN_BYTES }

@@ -1,5 +1,6 @@
 package com.aquascope.smriti.brain
 
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -23,12 +24,7 @@ class CaptureProjectionService : Service() {
     override fun onCreate() {
         super.onCreate()
         HardwareActuatorService.ensureChannel(this)
-        val n = NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_nav_scan)
-            .setContentTitle("SMRITI Play")
-            .setContentText("Recording last 30s as memory")
-            .setOngoing(true)
-            .build()
+        val n = buildRecordingNotification()
         if (Build.VERSION.SDK_INT >= 29) {
             startForeground(NOTIF, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
         } else {
@@ -41,6 +37,56 @@ class CaptureProjectionService : Service() {
         running.value = true
     }
 
+    private fun buildRecordingNotification(
+        statusLine: String = "PEACE watching · tap Clip anytime"
+    ): android.app.Notification {
+        val open = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, SmritiBrainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val clip = PendingIntent.getService(
+            this, 1,
+            Intent(this, CaptureProjectionService::class.java).setAction(ACTION_CLIP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val stop = PendingIntent.getService(
+            this, 2,
+            Intent(this, CaptureProjectionService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(R.drawable.ic_nav_scan)
+            .setContentTitle("SMRITI Capture")
+            .setContentText(statusLine)
+            .setContentIntent(open)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .addAction(0, "Clip", clip)
+            .addAction(0, "Stop", stop)
+            .build()
+    }
+
+    private fun publishClipResult(result: ClipFlushResult) {
+        NeuralCoreSession.clipSaved.value = result
+        when (result) {
+            is ClipFlushResult.Saved -> {
+                NeuralCoreSession.clipTick.value = System.currentTimeMillis()
+                ClipSaveNotifier.notifySaved(this, result)
+                runCatching {
+                    getSystemService(android.app.NotificationManager::class.java)
+                        ?.notify(NOTIF, buildRecordingNotification("Last clip saved · still recording"))
+                }
+            }
+            is ClipFlushResult.Failed -> ClipSaveNotifier.notifyFailed(this, result.message)
+            ClipFlushResult.Empty -> ClipSaveNotifier.notifyFailed(
+                this,
+                "Still buffering — keep Capture on a few seconds, then Clip again"
+            )
+            ClipFlushResult.NotRecording -> { }
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val cmd = intent
         if (cmd?.action == ACTION_STOP) {
@@ -48,11 +94,10 @@ class CaptureProjectionService : Service() {
             return START_NOT_STICKY
         }
         if (cmd?.action == ACTION_CLIP) {
-            val result = recorder?.captureNow("manual") ?: ClipFlushResult.NotRecording
-            if (result is ClipFlushResult.Saved) {
-                NeuralCoreSession.clipTick.value = System.currentTimeMillis()
-            }
-            NeuralCoreSession.clipSaved.value = result
+            Thread {
+                val result = recorder?.captureNow("manual") ?: ClipFlushResult.NotRecording
+                publishClipResult(result)
+            }.start()
             return START_STICKY
         }
         val data = projectionData(cmd)
@@ -67,8 +112,17 @@ class CaptureProjectionService : Service() {
         if (recorder == null) {
             val memory = SmritiMemoryEngine.get(this)
             val actuators = HardwareActuators.get(this)
-            recorder = ScreenBufferRecorder(this, memory, actuators) {
+            recorder = ScreenBufferRecorder(this, memory, actuators) { file ->
                 NeuralCoreSession.clipTick.value = System.currentTimeMillis()
+                // Auto PEACE flush already posts ClipFlushResult via NeuralCoreSession in recorder;
+                // refresh ongoing shade text.
+                runCatching {
+                    getSystemService(android.app.NotificationManager::class.java)
+                        ?.notify(
+                            NOTIF,
+                            buildRecordingNotification("PEACE clipped ${file.name} · still on")
+                        )
+                }
             }
             recorder?.start(resultCode, data, w, h, dpi)
             actuators.setHalo(SmritiLightState.SCREEN_RECORDING)
@@ -149,6 +203,14 @@ class CaptureProjectionService : Service() {
         }
 
         fun hasBufferedFrames(): Boolean = instance?.recorder?.hasBufferedFrames() == true
+
+        /** PNG of the latest Capture still, or null if Capture is off / no frame yet. */
+        fun exportLatestStill(context: Context): java.io.File? {
+            val recorder = instance?.recorder ?: return null
+            val dir = java.io.File(context.cacheDir, "ocr_capture").also { it.mkdirs() }
+            val out = java.io.File(dir, "capture_${System.currentTimeMillis()}.png")
+            return if (recorder.exportLatestStill(out)) out else null
+        }
 
         /**
          * OCR + save the rolling buffer, then tear down projection.
