@@ -1,0 +1,121 @@
+[build-system]
+requires = ["setuptools>=64,<75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "screenmind"
+dynamic = ["version"]
+description = "Privacy-first AI screen activity journal -- captures, analyzes, and searches your screen history using Gemma 4, 100% locally."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Ayush Shekhar"},
+]
+keywords = ["screen-capture", "ai", "privacy", "gemma", "local-ai", "activity-tracker", "llm", "vision"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Desktop Environment",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Graphics :: Capture :: Screen Capture",
+]
+
+dependencies = [
+    # Core
+    "fastapi>=0.115.6,<1.0",
+    "uvicorn[standard]>=0.34.0,<1.0",
+    "pydantic>=2.7.0,<3.0.0",
+    "pydantic-settings>=2.0,<3.0",
+    "python-dotenv>=0.21,<2.0",
+
+    # Screen Capture
+    "mss>=9.0,<10.0",
+    "Pillow>=10.0,<13.0",
+    "imagehash>=4.3,<5.0",
+
+    # Hotkey
+    "keyboard>=0.13.5,<1.0",
+
+    # HTTP client (for llama-server communication)
+    "httpx>=0.28.0,<1.0",
+
+    # Numerical
+    "numpy>=1.26,<3.0",
+
+    # Git Integration
+    "gitpython>=3.1,<4.0",
+
+    # Audio / Meeting Transcription
+    "sounddevice>=0.5,<1.0",
+
+    # Encryption (optional but included by default)
+    "cryptography>=41.0,<50.0",
+    "keyring>=23.0",
+]
+
+[project.optional-dependencies]
+# AI / ML — large download (~2.5 GB, includes PyTorch)
+# Prompted on first run if missing
+ai = [
+    "sentence-transformers>=3.3,<4.0",
+    "easyocr>=1.7.2,<2.0",
+]
+
+# MCP server for Claude Desktop / Cursor / VS Code
+mcp = ["mcp[cli]>=1.26.0,<2.0"]
+
+# Windows-only accessibility API
+windows = ["uiautomation>=2.0,<3.0"]
+
+# Development / Testing
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+
+[project.scripts]
+screenmind = "screenmind.main:run"
+
+[project.urls]
+Homepage = "https://screenmind.pages.dev"
+Repository = "https://github.com/ayushh0110/ScreenMind"
+Documentation = "https://github.com/ayushh0110/ScreenMind#readme"
+Changelog = "https://github.com/ayushh0110/ScreenMind/releases"
+Issues = "https://github.com/ayushh0110/ScreenMind/issues"
+
+[tool.setuptools.packages.find]
+include = ["screenmind", "screenmind.*"]
+exclude = ["tests", "tests.*"]
+
+[tool.setuptools.package-data]
+screenmind = [
+    "py.typed",
+    "api/static/**/*",
+    "api/static/css/*",
+    "api/static/js/*",
+    "api/static/index.html",
+    "default_agents/*.md",
+    "assets/*",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "screenmind.__version__"}
+
+
+
+# ── Pytest ────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

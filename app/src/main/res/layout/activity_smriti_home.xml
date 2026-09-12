@@ -137,6 +137,14 @@
                 android:layout_marginStart="8dp"
                 android:text="@string/smriti_aqua_native" />
         </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScreenMind"
+            style="@style/Widget.AquaScope.Button.Ghost"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/screenmind_desktop" />
     </LinearLayout>
 
     <LinearLayout

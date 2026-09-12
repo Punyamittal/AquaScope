@@ -25,3 +25,19 @@ Thumbs.db
 .cxx/
 smriti-aqua/.cxx/
 smriti-core/.cxx/
+
+# Python / ScreenMind
+__pycache__/
+*.py[cod]
+screenmind/__pycache__/
+screenmind/**/__pycache__/
+screenmind/data/
+screenmind/screenshots/
+screenmind/models/
+screenmind/llama/
+screenmind/*.db
+screenmind/*.db-wal
+screenmind/*.db-shm
+screenmind/settings.json
+screenmind/.pytest_cache/
+

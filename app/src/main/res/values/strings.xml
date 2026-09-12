@@ -5,6 +5,17 @@
     <string name="smriti_home_title">SMRITI</string>
     <string name="neural_core">Neural core</string>
     <string name="smriti_aqua_native">SMRITI AQUA (iQOO 15)</string>
+    <string name="screenmind_desktop">ScreenMind (Desktop)</string>
+    <string name="screenmind_title">SCREENMIND</string>
+    <string name="screenmind_sub">DESKTOP AI MEMORY · GEMMA 4</string>
+    <string name="screenmind_server_endpoint">DESKTOP SERVER ENDPOINT</string>
+    <string name="screenmind_status_checking">CHECKING…</string>
+    <string name="screenmind_url_hint">http://192.168.1.100:7777</string>
+    <string name="screenmind_btn_connect">Connect</string>
+    <string name="screenmind_query_hint">Search desktop memory or ask…</string>
+    <string name="screenmind_btn_search">Search</string>
+    <string name="screenmind_btn_chat">Chat</string>
+    <string name="screenmind_empty_notice">Search your desktop screen history or ask what was on your computer screen.</string>
     <string name="neural_core_section">NEURAL CORE</string>
     <string name="neural_core_blurb">Guardian, play capture, IR, and on-device recall live in this same app as acoustic sensing.</string>
     <string name="smriti_home_sub">HOME MEMORY</string>
