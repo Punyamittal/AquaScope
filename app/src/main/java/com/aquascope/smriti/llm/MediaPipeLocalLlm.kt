@@ -34,8 +34,9 @@ class MediaPipeLocalLlm(
             Log.w(TAG, "Refusing Gallery NPU bundle: ${modelFile.name}")
             return false
         }
-        // maxTokens is prompt + reply. 384 cannot fit a grounded Ask prompt.
-        maxTokens = if (modelFile.length() > 900_000_000L) 768 else 1024
+        // maxTokens is prompt + reply.
+        maxTokens = if (modelFile.name.contains("1280", ignoreCase = true)) 1024
+            else if (modelFile.length() > 900_000_000L) 768 else 1024
         return try {
             System.gc()
             val options = LlmInference.LlmInferenceOptions.builder()
@@ -89,14 +90,15 @@ class MediaPipeLocalLlm(
             LlmInferenceSession.createFromOptions(
                 engine,
                 LlmInferenceSession.LlmInferenceSessionOptions.builder()
-                    .setTopK(20)
-                    .setTemperature(0.35f)
+                    .setTopK(40)
+                    .setTemperature(0.3f)
                     .build()
             )
         }
         return try {
             session.addQueryChunk(prompt)
-            session.generateResponse()?.trim()?.takeIf { it.isNotEmpty() }
+            val raw = session.generateResponse()?.trim()?.takeIf { it.isNotEmpty() }
+            raw?.let { BpeDecoder.cleanModelOutput(it) }
         } finally {
             try {
                 session.close()
@@ -107,9 +109,9 @@ class MediaPipeLocalLlm(
 
     private fun sessionOptions(): LlmInferenceSession.LlmInferenceSessionOptions =
         LlmInferenceSession.LlmInferenceSessionOptions.builder()
-            .setTopK(20)
-            .setTopP(0.8f)
-            .setTemperature(0.35f)
+            .setTopK(40)
+            .setTopP(0.9f)
+            .setTemperature(0.3f)
             .setGraphOptions(
                 GraphOptions.builder()
                     .setEnableVisionModality(false)
@@ -164,6 +166,8 @@ class MediaPipeLocalLlm(
         val name = modelFile.name.lowercase()
         return if (name.contains("gemma")) {
             "<start_of_turn>user\n$raw<end_of_turn>\n<start_of_turn>model\n"
+        } else if (name.contains("qwen")) {
+            "<|im_start|>system\nYou are SMRITI, an on-device home acoustic-memory assistant. Follow the facts strictly.<|im_end|>\n<|im_start|>user\n$raw<|im_end|>\n<|im_start|>assistant\n"
         } else {
             raw
         }

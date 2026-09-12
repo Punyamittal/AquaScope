@@ -30,6 +30,10 @@ import com.aquascope.smriti.skills.SkillMatcher
 import com.aquascope.smriti.skills.SkillPreferences
 import com.aquascope.smriti.skills.SkillPromptInjector
 import com.aquascope.smriti.skills.SkillToolRunner
+import com.aquascope.smriti.screenmind.ScreenMindBridge
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 /**
@@ -129,6 +133,7 @@ class SmritiCore(context: Context) {
             locationId, locationLabel, features, anomalyScore, hasBaseline
         )
         store.appendEvent(event)
+        dispatchScanToScreenMind(event)
         return event
     }
 
@@ -142,7 +147,21 @@ class SmritiCore(context: Context) {
             locationId, locationLabel, features, sampleCount
         )
         store.appendEvent(event)
+        dispatchScanToScreenMind(event)
         return event
+    }
+
+    private fun dispatchScanToScreenMind(event: PhysicalEvent) {
+        val bridge = ScreenMindBridge.get(appContext)
+        if (bridge.isAutoSyncEnabled()) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    bridge.syncScan(event)
+                } catch (t: Throwable) {
+                    Log.d("SmritiCore", "ScreenMind auto-sync skipped: ${t.message}")
+                }
+            }
+        }
     }
 
     fun rememberObservation(
@@ -281,7 +300,8 @@ class SmritiCore(context: Context) {
     fun ask(
         question: String,
         allowLocalLlm: Boolean = true,
-        neuralEpisodes: List<com.aquascope.smriti.brain.EpisodeRecord> = emptyList()
+        neuralEpisodes: List<com.aquascope.smriti.brain.EpisodeRecord> = emptyList(),
+        language: String? = null
     ): SmritiAnswer {
         val query = retrieval.parse(question)
         var retrieved = retrieval.retrieve(query)
@@ -376,9 +396,10 @@ class SmritiCore(context: Context) {
             }
             return ruleAnswer.copy(usedLocalModel = false, modelName = null)
         }
+        val targetLang = language ?: llmPrefs.targetLanguage
         return try {
             SmritiAnswerComposer(isolatedLlm, llmPrefs)
-                .compose(question, ruleAnswer, query.intent, skillMatch, catalogBlurb)
+                .compose(question, ruleAnswer, query.intent, skillMatch, catalogBlurb, targetLang)
         } catch (t: Throwable) {
             Log.w("SmritiCore", "LLM compose failed", t)
             if (!toolResult.isNullOrBlank()) {

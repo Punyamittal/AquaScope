@@ -116,13 +116,35 @@
             android:textColor="@color/navy_mid"
             android:textSize="13sp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNeuralCore"
-            style="@style/Widget.AquaScope.Button"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/neural_core" />
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNeuralCore"
+                style="@style/Widget.AquaScope.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/neural_core" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSmritiAqua"
+                style="@style/Widget.AquaScope.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/smriti_aqua_native" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScreenMind"
+            style="@style/Widget.AquaScope.Button.Ghost"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/screenmind_desktop" />
     </LinearLayout>
 
     <LinearLayout

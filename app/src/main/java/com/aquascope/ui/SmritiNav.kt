@@ -44,6 +44,14 @@ object SmritiNav {
         activity.startActivity(Intent(activity, com.aquascope.smriti.brain.SmritiBrainActivity::class.java))
     }
 
+    fun openSmritiAqua(activity: Activity) {
+        activity.startActivity(Intent(activity, com.smriti.aqua.MainActivity::class.java))
+    }
+
+    fun openScreenMind(activity: Activity) {
+        activity.startActivity(Intent(activity, ScreenMindActivity::class.java))
+    }
+
     private fun openTab(activity: Activity, from: Int, to: Int) {
         if (to == from) return
         val target = when (to) {

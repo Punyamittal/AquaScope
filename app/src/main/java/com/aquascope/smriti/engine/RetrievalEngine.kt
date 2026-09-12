@@ -20,27 +20,45 @@ class RetrievalEngine(
         val q = question.lowercase(Locale.getDefault())
         val intent = when {
             q.contains("definitely a leak") || q.contains("is it a leak") ||
-                q.contains("confirm") && q.contains("leak") -> QueryIntent.IS_DEFINITE_LEAK
-            q.contains("first") || q.contains("when did") || q.contains("start") ->
-                QueryIntent.FIRST_OCCURRENCE
-            q.contains("before") || q.contains("happened before") || q.contains("similar") ->
-                QueryIntent.HAS_HAPPENED_BEFORE
-            q.contains("this week") || q.contains("how many") -> QueryIntent.COUNT_THIS_WEEK
-            q.contains("today") || q.contains("changed today") || q.contains("what changed") ->
-                QueryIntent.WHAT_CHANGED_TODAY
-            q.contains("worse") || q.contains("getting worse") || q.contains("increasing") ->
-                QueryIntent.IS_GETTING_WORSE
-            q.contains("evidence") || q.contains("why") || q.contains("show me") && q.contains("record") ->
-                QueryIntent.SHOW_EVIDENCE
-            q.contains("normal") || q.contains("baseline") -> QueryIntent.WHAT_IS_NORMAL
+                (q.contains("confirm") && q.contains("leak")) ||
+                q.contains("leak hai") || q.contains("futa") || q.contains("pakka leak") ||
+                q.contains("fuga") || q.contains("fuite") -> QueryIntent.IS_DEFINITE_LEAK
+
+            q.contains("first") || q.contains("when did") || q.contains("start") ||
+                q.contains("kab shuru") || q.contains("shuruat") || q.contains("pehle kab") ||
+                q.contains("premier") || q.contains("cuándo empezó") -> QueryIntent.FIRST_OCCURRENCE
+
+            q.contains("before") || q.contains("happened before") || q.contains("similar") ||
+                q.contains("pehle bhi") || q.contains("pehle hua") || q.contains("dobara") ||
+                q.contains("kabhi hua") || q.contains("antes") || q.contains("déjà") -> QueryIntent.HAS_HAPPENED_BEFORE
+
+            q.contains("this week") || q.contains("how many") ||
+                q.contains("is hafte") || q.contains("kitni baar") ||
+                q.contains("esta semana") || q.contains("cette semaine") -> QueryIntent.COUNT_THIS_WEEK
+
+            q.contains("today") || q.contains("changed today") || q.contains("what changed") ||
+                q.contains("aaj kya") || q.contains("aaj ka") || q.contains("kya badla") ||
+                q.contains("hoy") || q.contains("aujourd'hui") -> QueryIntent.WHAT_CHANGED_TODAY
+
+            q.contains("worse") || q.contains("getting worse") || q.contains("increasing") ||
+                q.contains("badh raha") || q.contains("kharab ho") || q.contains("peor") ||
+                q.contains("pire") -> QueryIntent.IS_GETTING_WORSE
+
+            q.contains("evidence") || q.contains("why") || (q.contains("show me") && q.contains("record")) ||
+                q.contains("saboot") || q.contains("praman") || q.contains("kyun") ||
+                q.contains("evidencia") || q.contains("preuve") -> QueryIntent.SHOW_EVIDENCE
+
+            q.contains("normal") || q.contains("baseline") ||
+                q.contains("sahi") || q.contains("theek") -> QueryIntent.WHAT_IS_NORMAL
+
             else -> QueryIntent.GENERAL
         }
 
         val locationHint = when {
-            q.contains("kitchen") && !q.contains("alert") -> "kitchen"
-            q.contains("bathroom") -> "bathroom"
-            q.contains("pump") -> "pump"
-            q.contains("pipe") -> "pipe"
+            (q.contains("kitchen") || q.contains("rasoi") || q.contains("cocina") || q.contains("cuisine")) && !q.contains("alert") -> "kitchen"
+            q.contains("bathroom") || q.contains("gusal") || q.contains("washroom") || q.contains("baño") || q.contains("bain") -> "bathroom"
+            q.contains("pump") || q.contains("motor") -> "pump"
+            q.contains("pipe") || q.contains("nal") || q.contains("tubería") || q.contains("tuyau") -> "pipe"
             q.contains("guardian") || q.contains("kitchen alert") ||
                 q.contains("smoke") || q.contains("glass") -> "guardian"
             q.contains("ir blaster") || q.contains("infrared") ||
@@ -61,12 +79,12 @@ class RetrievalEngine(
         }
 
         val since = when {
-            intent == QueryIntent.WHAT_CHANGED_TODAY || q.contains("today") -> startOfDayMs()
-            intent == QueryIntent.COUNT_THIS_WEEK || q.contains("week") -> startOfWeekMs()
-            q.contains("yesterday") -> startOfDayMs() - 24L * 60 * 60 * 1000
+            intent == QueryIntent.WHAT_CHANGED_TODAY || q.contains("today") || q.contains("aaj") || q.contains("hoy") -> startOfDayMs()
+            intent == QueryIntent.COUNT_THIS_WEEK || q.contains("week") || q.contains("hafte") || q.contains("semana") -> startOfWeekMs()
+            q.contains("yesterday") || q.contains("kal") || q.contains("ayer") -> startOfDayMs() - 24L * 60 * 60 * 1000
             else -> null
         }
-        val until = if (q.contains("yesterday")) startOfDayMs() else null
+        val until = if (q.contains("yesterday") || q.contains("kal") || q.contains("ayer")) startOfDayMs() else null
 
         return MemoryQuery(
             raw = question,

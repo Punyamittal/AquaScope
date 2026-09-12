@@ -8,6 +8,7 @@ import com.aquascope.smriti.skills.SkillMatch
 /**
  * Rules are the source of truth. Local LLM rephrases or answers free-form from grounded facts.
  * Edge Gallery–style skills may inject instructions / tool results.
+ * Multilingual fallback ensures natural responses in Hindi/Hinglish when LLM is absent or fallback needed.
  */
 class SmritiAnswerComposer(
     private val llm: LocalLlmEngine?,
@@ -19,10 +20,13 @@ class SmritiAnswerComposer(
         ruleAnswer: SmritiAnswer,
         intent: QueryIntent = QueryIntent.GENERAL,
         skillMatch: SkillMatch? = null,
-        skillCatalogBlurb: String = ""
+        skillCatalogBlurb: String = "",
+        language: String = prefs.targetLanguage
     ): SmritiAnswer {
-        val cleanedRule = ruleAnswer.copy(
-            text = AskAnswerCleaner.cleanForDisplay(ruleAnswer.text)
+        val target = GroundedPromptBuilder.detectLanguage(question, language)
+        val cleanedRule = fallbackAnswer(
+            ruleAnswer.copy(text = AskAnswerCleaner.cleanForDisplay(ruleAnswer.text)),
+            target
         )
 
         // Tool-only skills can answer without a model (hash / email / wikipedia).
@@ -43,23 +47,24 @@ class SmritiAnswerComposer(
 
         val prompt = if (intent == QueryIntent.GENERAL || skillMatch?.skill?.id == "kitchen-adventure") {
             GroundedPromptBuilder.buildChat(
-                question, cleanedRule, cleanedRule.relatedEvents, skillMatch, skillCatalogBlurb
+                question, cleanedRule, cleanedRule.relatedEvents, skillMatch, skillCatalogBlurb, target
             )
         } else {
             GroundedPromptBuilder.build(
-                question, cleanedRule, cleanedRule.relatedEvents, skillMatch, skillCatalogBlurb
+                question, cleanedRule, cleanedRule.relatedEvents, skillMatch, skillCatalogBlurb, target
             )
         }
 
         val polished = try {
-            llm.generate(prompt)
+            val raw = llm.generate(prompt)
+            raw?.let { BpeDecoder.cleanModelOutput(it) }
         } catch (t: Throwable) {
             null
         } ?: return if (!skillMatch?.toolResult.isNullOrBlank()) {
             cleanedRule.copy(
                 text = AskAnswerCleaner.cleanForDisplay(skillMatch!!.toolResult!!),
                 usedLocalModel = false,
-                modelName = "skill:${skillMatch.skill.name}"
+                modelName = "skill:${skillMatch!!.skill.name}"
             )
         } else {
             cleanedRule.copy(usedLocalModel = false, modelName = null)
@@ -78,7 +83,7 @@ class SmritiAnswerComposer(
                 cleanedRule.copy(
                     text = AskAnswerCleaner.cleanForDisplay(skillMatch!!.toolResult!!),
                     usedLocalModel = false,
-                    modelName = "skill:${skillMatch.skill.name}"
+                    modelName = "skill:${skillMatch!!.skill.name}"
                 )
             } else {
                 cleanedRule.copy(usedLocalModel = false, modelName = null)
@@ -104,6 +109,28 @@ class SmritiAnswerComposer(
             usedLocalModel = true,
             modelName = llm.modelLabel
         )
+    }
+
+    private fun fallbackAnswer(ruleAnswer: SmritiAnswer, target: String): SmritiAnswer {
+        if (target != "hi" && target != "hinglish") return ruleAnswer
+        val translated = when (target) {
+            "hi" -> when (ruleAnswer.evidenceState) {
+                EvidenceState.UNKNOWN -> "मुझे मेमोरी में इसका कोई रिकॉर्ड नहीं मिला है। आप एक नया एक्वास्कोप स्कैन चला सकते हैं।"
+                EvidenceState.OBSERVED -> "मेमोरी में असामान्य आवाज़ के रिकॉर्ड मिले हैं (${ruleAnswer.relatedEvents.size} घटनाएँ)। अभी किसी पक्के लीक की पुष्टि नहीं हुई है, कृपया पाइप की जांच करें।"
+                EvidenceState.POSSIBLE, EvidenceState.INFERRED -> "संभावित असामान्य बहाव या रिसाव का संकेत मिला है। पाइप और फिटिंग्स की जांच करने की सलाह दी जाती है।"
+                EvidenceState.CONFIRMED -> "पुष्ट पानी के रिसाव का रिकॉर्ड मौजूद है। कृपया तुरंत समस्या को ठीक करें।"
+                else -> "मेमोरी में असामान्य आवाज़ के रिकॉर्ड मिले हैं। कृपया एक बार जांच कर लें।"
+            }
+            "hinglish" -> when (ruleAnswer.evidenceState) {
+                EvidenceState.UNKNOWN -> "Mujhe memory me iska koi record nahi mila hai. Aap ek naya AquaScope scan chala sakte hain."
+                EvidenceState.OBSERVED -> "Memory me abnormal sound ke records mile hain (${ruleAnswer.relatedEvents.size} events). Abhi kisi pakke leak ki pushti nahi hui hai, kripya pipe check karein."
+                EvidenceState.POSSIBLE, EvidenceState.INFERRED -> "Sambhavit abnormal flow ya leak ka signal mila hai. Pipe aur fittings check karne ki salaah di jaati hai."
+                EvidenceState.CONFIRMED -> "Confirmed leak ka record maujood hai. Kripya turant inspect karein."
+                else -> "Memory me abnormal sound ke records mile hain. Kripya check kar lijiye."
+            }
+            else -> ruleAnswer.text
+        }
+        return ruleAnswer.copy(text = translated)
     }
 
     companion object {

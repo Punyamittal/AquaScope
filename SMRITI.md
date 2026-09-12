@@ -46,3 +46,10 @@ Sensing defaults remain in `IqooDeviceProfile`. SMRITI adds negligible RAM vs DS
 Optional Gemma 3 1B INT4 for Ask rephrase: ~1–2 GB extra when loaded (see `LOCAL_MODELS.md`).
 
 **Monster Halo** is SMRITI’s physical expression — see [HALO.md](HALO.md). Screen state and camera-border light share one semantic palette (cyan / blue / purple / white / amber / red / teal).
+
+## Merged iQOO 15 Android Modules
+
+- **`:smriti-aqua`**: Native C++ KissFFT DSP engine (`dsp_core.cpp`, `jni_bridge.cpp`, CMake build), JNI wrapper (`DspEngine.kt`), acoustic and accelerometer fusion (`AcousticProbe.kt`, `AccelRecorder.kt`, `FusionGate.kt`), SQLite episodic memory store (`EpisodicStore.kt`), grounded recall engine (`RecallEngine.kt`), and offline Compose UI (`ScanScreen`, `TimelineScreen`, `ChatScreen`). Directly merged from the iQOO 15 Android Project.
+- **`:smriti-core`**: Standalone second-brain offline hub (`com.smriti.core`).
+- **`screenmind/`**: Integrated desktop AI screen memory engine powered by Gemma 4 via llama.cpp (FastAPI server, SQLite FTS5, MCP server, web dashboard, and cross-device Android bridge). See [docs/SCREENMIND_INTEGRATION.md](docs/SCREENMIND_INTEGRATION.md).
+- **Specification Contract**: See [docs/iQOO_15_SMRITI_AQUA_SPEC.md](docs/iQOO_15_SMRITI_AQUA_SPEC.md), [docs/iQOO_15_SMRITI_CORE_SPEC.md](docs/iQOO_15_SMRITI_CORE_SPEC.md), and [docs/SCREENMIND_INTEGRATION.md](docs/SCREENMIND_INTEGRATION.md).

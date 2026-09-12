@@ -1,12 +1,17 @@
 package com.aquascope.ui
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import com.aquascope.R
 import com.aquascope.databinding.ActivityAskSmritiBinding
@@ -16,9 +21,11 @@ import com.aquascope.smriti.SmritiCore
 import com.aquascope.smriti.model.EvidenceState
 import com.aquascope.smriti.model.SmritiAnswer
 import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class AskSmritiActivity : SmritiScreenActivity() {
 
@@ -27,6 +34,24 @@ class AskSmritiActivity : SmritiScreenActivity() {
     private lateinit var haloBind: HaloBinding
     private var lastEvidenceEventId: String? = null
     private var answering = false
+    private var lastQueryWasVoice = false
+
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
+    private var isSpeaking = false
+
+    private val voiceLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!spoken.isNullOrBlank()) {
+                binding.inputQuestion.setText(spoken)
+                lastQueryWasVoice = true
+                ask(spoken)
+            }
+        }
+    }
 
     private val suggestions = listOf(
         "Has this happened before?",
@@ -43,6 +68,13 @@ class AskSmritiActivity : SmritiScreenActivity() {
         SmritiNav.bind(this, binding.bottomNav, SmritiNav.TAB_ASK)
         haloBind = HaloBinding(this, binding.haloIndicator)
 
+        initTts()
+        updateLanguageBadge()
+
+        binding.btnLanguage.setOnClickListener {
+            showLanguageDialog()
+        }
+
         suggestions.forEach { q ->
             val chip = Chip(this).apply {
                 text = q
@@ -53,6 +85,7 @@ class AskSmritiActivity : SmritiScreenActivity() {
                 setTextColor(getColor(R.color.warm_muted))
                 setOnClickListener {
                     binding.inputQuestion.setText(q)
+                    lastQueryWasVoice = false
                     ask(q)
                 }
             }
@@ -63,11 +96,22 @@ class AskSmritiActivity : SmritiScreenActivity() {
             startActivity(Intent(this, LocalModelActivity::class.java))
         }
 
-        binding.btnAsk.setOnClickListener { submitFromInput() }
+        binding.btnAsk.setOnClickListener {
+            lastQueryWasVoice = false
+            submitFromInput()
+        }
+        binding.btnMic.setOnClickListener {
+            startVoiceRecognition()
+        }
+        binding.btnSpeak.setOnClickListener {
+            val text = binding.textAnswer.text?.toString().orEmpty()
+            if (text.isNotBlank()) speakText(text)
+        }
         binding.inputQuestion.setOnEditorActionListener { _, actionId, event ->
             val go = actionId == EditorInfo.IME_ACTION_SEND ||
                 (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
             if (go) {
+                lastQueryWasVoice = false
                 submitFromInput()
                 true
             } else false
@@ -240,7 +284,154 @@ class AskSmritiActivity : SmritiScreenActivity() {
                     Toast.LENGTH_SHORT
                 ).show()
             }
+
+            if (lastQueryWasVoice || smriti.llmPrefs.autoSpeak) {
+                speakText(answer.text)
+            }
         }
+    }
+
+    private fun initTts() {
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                ttsReady = true
+                applyTtsLanguage(smriti.llmPrefs.targetLanguage)
+            }
+        }
+    }
+
+    private fun applyTtsLanguage(langCode: String, text: String? = null) {
+        val engine = tts ?: return
+        if (!ttsReady) return
+        val targetLocale = when (langCode.lowercase()) {
+            "hi" -> Locale("hi", "IN")
+            "es" -> Locale("es", "ES")
+            "fr" -> Locale("fr", "FR")
+            "de" -> Locale("de", "DE")
+            "en" -> Locale("en", "US")
+            "hinglish" -> Locale("hi", "IN")
+            else -> {
+                if (text != null && text.any { it in '\u0900'..'\u097F' }) {
+                    Locale("hi", "IN")
+                } else {
+                    Locale.getDefault()
+                }
+            }
+        }
+        val res = engine.setLanguage(targetLocale)
+        if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
+            engine.language = Locale.getDefault()
+        }
+    }
+
+    private fun speakText(text: String) {
+        val engine = tts ?: return
+        if (!ttsReady) {
+            Toast.makeText(this, "Speech engine loading...", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (isSpeaking) {
+            engine.stop()
+            isSpeaking = false
+            binding.btnSpeak.text = "🔊 Speak"
+            return
+        }
+        applyTtsLanguage(smriti.llmPrefs.targetLanguage, text)
+        val params = Bundle().apply {
+            putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "ask_answer")
+        }
+        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                runOnUiThread {
+                    isSpeaking = true
+                    binding.btnSpeak.text = "⏹ Stop"
+                }
+            }
+            override fun onDone(utteranceId: String?) {
+                runOnUiThread {
+                    isSpeaking = false
+                    binding.btnSpeak.text = "🔊 Speak"
+                }
+            }
+            override fun onError(utteranceId: String?) {
+                runOnUiThread {
+                    isSpeaking = false
+                    binding.btnSpeak.text = "🔊 Speak"
+                }
+            }
+        })
+        engine.speak(text, TextToSpeech.QUEUE_FLUSH, params, "ask_answer")
+    }
+
+    private fun startVoiceRecognition() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Ask SMRITI in any language...")
+            val langTag = when (smriti.llmPrefs.targetLanguage.lowercase()) {
+                "hi" -> "hi-IN"
+                "es" -> "es-ES"
+                "fr" -> "fr-FR"
+                "de" -> "de-DE"
+                "en" -> "en-US"
+                "hinglish" -> "hi-IN"
+                else -> Locale.getDefault().toLanguageTag()
+            }
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, langTag)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, langTag)
+        }
+        try {
+            voiceLauncher.launch(intent)
+        } catch (_: Exception) {
+            Toast.makeText(this, "Voice input not available on device", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateLanguageBadge() {
+        val label = when (smriti.llmPrefs.targetLanguage.lowercase()) {
+            "hi" -> "🌐 हिन्दी"
+            "hinglish" -> "🌐 Hinglish"
+            "es" -> "🌐 ES"
+            "fr" -> "🌐 FR"
+            "de" -> "🌐 DE"
+            "en" -> "🌐 EN"
+            else -> "🌐 Auto"
+        }
+        binding.btnLanguage.text = label
+    }
+
+    private fun showLanguageDialog() {
+        val languages = arrayOf(
+            "Auto (Match question language)",
+            "English",
+            "हिन्दी (Hindi)",
+            "Hinglish (Hindi in English script)",
+            "Español (Spanish)",
+            "Français (French)",
+            "Deutsch (German)"
+        )
+        val codes = arrayOf("auto", "en", "hi", "hinglish", "es", "fr", "de")
+        val currentIdx = codes.indexOf(smriti.llmPrefs.targetLanguage).takeIf { it >= 0 } ?: 0
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Chat & Voice Language")
+            .setSingleChoiceItems(languages, currentIdx) { dialog, which ->
+                val selected = codes[which]
+                smriti.llmPrefs.targetLanguage = selected
+                updateLanguageBadge()
+                applyTtsLanguage(selected)
+                Toast.makeText(this, "Language: ${languages[which]}", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    override fun onDestroy() {
+        try {
+            tts?.stop()
+            tts?.shutdown()
+        } catch (_: Exception) {}
+        super.onDestroy()
     }
 
     companion object {

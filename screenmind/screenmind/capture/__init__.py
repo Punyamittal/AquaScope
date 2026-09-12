@@ -1,0 +1,1 @@
+# ScreenMind - capture module

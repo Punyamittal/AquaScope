@@ -50,12 +50,22 @@ An Android app that turns your phone into a vibro-acoustic wall/pipe diagnostic 
 ## Project Structure
 
 ```
-app/src/main/java/com/aquascope/
-├── audio/          Chirp generation, playback + recording (AudioTrack/AudioRecord)
-├── dsp/            Pure-Kotlin FFT, deconvolution, feature extraction
-├── baseline/       Anomaly scoring with configurable thresholds
-├── data/           JSON-based local persistence for locations & scan history
-└── ui/             Scan screen, results, history, multi-point scanning
+AquaScope/
+├── app/                  Main AquaScope sensing application & Smriti Home UI
+├── smriti-aqua/          Merged iQOO 15 Native C++ KissFFT DSP & Compose UI module
+│   ├── src/main/cpp/     KissFFT STFT, log-mel filterbank, 72-d fingerprint, JNI bridge
+│   └── src/main/java/    AcousticProbe, DspEngine, EpisodicStore, RecallEngine, UI
+├── smriti-core/          Merged iQOO 15 offline second-brain core module
+├── screenmind/           Integrated Desktop AI Screen Memory Engine (Gemma 4 via llama.cpp)
+├── core-database/        Room episode database, local embedding & taxonomy
+├── core-hardware/        Monster Halo RGB, haptic actuator, IR blaster
+├── core-telemetry/       1 Hz RAM + thermal telemetry monitor
+├── feature-capture/      Screen buffer recording & OCR ingestion
+├── feature-gaming/       Kill-feed highlight trigger engine
+├── feature-guardian/     Ambient audio watcher & fall detector
+├── feature-memory/       Episodic retrieval engine & voice recall
+├── docs/                 SMRITI AQUA & SMRITI Core hardware & contract specifications
+└── tools/                Python DSP reference simulation & diff visualization
 ```
 
 ## Building & Running

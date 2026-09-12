@@ -18,6 +18,14 @@ class LocalLlmPreferences(context: Context) {
             prefs.edit().putString(KEY_HF_TOKEN, token).commit()
         }
 
+    var targetLanguage: String
+        get() = prefs.getString(KEY_TARGET_LANGUAGE, "auto") ?: "auto"
+        set(value) = prefs.edit().putString(KEY_TARGET_LANGUAGE, value).apply()
+
+    var autoSpeak: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_SPEAK, false)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_SPEAK, value).apply()
+
     fun hasHfAccessToken(): Boolean = hfAccessToken.isNotBlank()
 
     fun maskedToken(): String = LocalModelDownloadPolicy.maskToken(hfAccessToken)
@@ -30,5 +38,7 @@ class LocalLlmPreferences(context: Context) {
         private const val PREFS = "smriti_local_llm"
         private const val KEY_ENABLED = "enabled"
         private const val KEY_HF_TOKEN = "hf_access_token"
+        private const val KEY_TARGET_LANGUAGE = "target_language"
+        private const val KEY_AUTO_SPEAK = "auto_speak"
     }
 }

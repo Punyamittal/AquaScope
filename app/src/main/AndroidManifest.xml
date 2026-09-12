@@ -63,6 +63,10 @@
         <activity android:name=".ui.EvidenceActivity" />
         <activity android:name=".ui.LocalModelActivity" />
         <activity
+            android:name=".ui.ScreenMindActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AquaScope" />
+        <activity
             android:name=".smriti.brain.SmritiBrainActivity"
             android:exported="false"
             android:theme="@style/Theme.AquaScope" />

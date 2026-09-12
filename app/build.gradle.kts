@@ -46,11 +46,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
     buildFeatures {
         viewBinding = true
@@ -90,8 +90,11 @@ dependencies {
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:4.3")
     // Optional on-device LLM (Gemma via MediaPipe). App runs without a model file.
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    implementation("androidx.navigation:navigation-compose:2.7.5")
+    implementation(project(":smriti-aqua"))
     // Gemma 4 LiteRT-LM needs Kotlin 2.x — download stores .litertlm for now; Ask uses MediaPipe .task.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
