@@ -20,11 +20,30 @@ class LocalModelStore(context: Context) {
     fun stagingFile(name: String): File = File(root, "$name.part")
 
     fun isPresent(name: String): Boolean {
+        recoverCompleteDownloads()
         val f = fileFor(name)
-        return f.isFile && f.length() > MIN_BYTES
+        val expected = LocalModelCatalog.downloadable.find { it.fileName == name }?.sizeBytes ?: 0L
+        return f.isFile && LocalModelDownloadPolicy.isCompleteEnough(f.length(), expected)
     }
 
     fun usableSpace(): Long = root.usableSpace
+
+    /**
+     * If a finished .part never got renamed (reboot, kill), promote it so the UI
+     * does not ask to download the same model again.
+     */
+    fun recoverCompleteDownloads() {
+        LocalModelCatalog.downloadable.forEach { entry ->
+            val dest = fileFor(entry.fileName)
+            if (dest.isFile && LocalModelDownloadPolicy.isCompleteEnough(dest.length(), entry.sizeBytes)) {
+                return@forEach
+            }
+            val staging = stagingFile(entry.fileName)
+            if (staging.isFile && LocalModelDownloadPolicy.isCompleteEnough(staging.length(), entry.sizeBytes)) {
+                runCatching { promoteStaging(entry.fileName) }
+            }
+        }
+    }
 
     fun promoteStaging(name: String): File {
         val staging = stagingFile(name)
@@ -46,12 +65,20 @@ class LocalModelStore(context: Context) {
             .orEmpty()
 
     fun findInstalled(): File? {
+        recoverCompleteDownloads()
         val preferred = LocalModelCatalog.preferredFileNames()
         for (name in preferred) {
             val f = File(root, name)
-            if (f.isFile && f.length() > MIN_BYTES && isLoadableMediaPipe(name)) return f
+            val expected = LocalModelCatalog.downloadable.find { it.fileName == name }?.sizeBytes ?: 0L
+            if (f.isFile &&
+                LocalModelDownloadPolicy.isCompleteEnough(f.length(), expected) &&
+                isLoadableMediaPipe(name)
+            ) return f
         }
-        val files = listModelFiles().filter { it.length() > MIN_BYTES && isLoadableMediaPipe(it.name) }
+        val files = listModelFiles().filter { file ->
+            val expected = LocalModelCatalog.downloadable.find { it.fileName == file.name }?.sizeBytes ?: 0L
+            LocalModelDownloadPolicy.isCompleteEnough(file.length(), expected) && isLoadableMediaPipe(file.name)
+        }
         return files.firstOrNull { isPreferredTask(it.name) } ?: files.firstOrNull()
     }
 

@@ -64,11 +64,13 @@
         <service
             android:name=".smriti.brain.CaptureProjectionService"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+            android:foregroundServiceType="mediaProjection"
+            android:stopWithTask="false" />
         <service
             android:name=".smriti.brain.GuardianService"
             android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="microphone"
+            android:stopWithTask="false" />
         <service
             android:name=".smriti.llm.LlmSandboxService"
             android:exported="false"

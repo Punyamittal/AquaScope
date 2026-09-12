@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:2:1-79:12
-INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:2:1-79:12
-INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:2:1-79:12
-INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:2:1-79:12
+ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:2:1-81:12
+INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:2:1-81:12
+INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:2:1-81:12
+INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:2:1-81:12
 MERGED from [androidx.databinding:viewbinding:8.2.0] C:\Users\punya mittal\.gradle\caches\transforms-3\b2e1fd5335431e0e26e1c490083c3ddd\transformed\viewbinding-8.2.0\AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.android.material:material:1.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3559eb5ebeaad62704f7fbaaa5a28630\transformed\material-1.11.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] C:\Users\punya mittal\.gradle\caches\transforms-3\b999ebbb1e86304546a5baac97efbf65\transformed\constraintlayout-2.1.4\AndroidManifest.xml:2:1-11:12
@@ -174,8 +174,8 @@ ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:17:5
 	android:name
 		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:17:19-61
 application
-ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:19:5-77:19
-INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:19:5-77:19
+ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:19:5-79:19
+INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:19:5-79:19
 MERGED from [com.google.android.material:material:1.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3559eb5ebeaad62704f7fbaaa5a28630\transformed\material-1.11.0\AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3559eb5ebeaad62704f7fbaaa5a28630\transformed\material-1.11.0\AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] C:\Users\punya mittal\.gradle\caches\transforms-3\b999ebbb1e86304546a5baac97efbf65\transformed\constraintlayout-2.1.4\AndroidManifest.xml:9:5-20
@@ -309,29 +309,33 @@ ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:61:9
 	android:name
 		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:62:13-65
 service#com.aquascope.smriti.brain.CaptureProjectionService
-ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:64:9-67:63
+ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:64:9-68:44
 	android:exported
 		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:66:13-37
+	android:stopWithTask
+		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:68:13-41
 	android:foregroundServiceType
 		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:67:13-60
 	android:name
 		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:65:13-66
 service#com.aquascope.smriti.brain.GuardianService
-ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:68:9-71:58
+ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:69:9-73:44
 	android:exported
-		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:70:13-37
+		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:71:13-37
+	android:stopWithTask
+		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:73:13-41
 	android:foregroundServiceType
-		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:71:13-55
+		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:72:13-55
 	android:name
-		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:69:13-57
+		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:70:13-57
 service#com.aquascope.smriti.llm.LlmSandboxService
-ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:72:9-75:45
+ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:74:9-77:45
 	android:process
-		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:75:13-42
+		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:77:13-42
 	android:exported
-		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:74:13-37
+		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:76:13-37
 	android:name
-		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:73:13-57
+		ADDED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:75:13-57
 uses-sdk
 INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml

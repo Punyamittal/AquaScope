@@ -61,6 +61,12 @@ object LocalModelDownloadPolicy {
         return if (mb < 1024) String.format(Locale.US, "%.1f MB", mb)
         else String.format(Locale.US, "%.2f GB", mb / 1024.0)
     }
+
+    fun isCompleteEnough(actualBytes: Long, expectedBytes: Long): Boolean {
+        if (actualBytes < LocalModelStore.MIN_BYTES) return false
+        if (expectedBytes <= 0L) return true
+        return actualBytes >= expectedBytes * 8 / 10
+    }
 }
 
 /**
@@ -199,6 +205,7 @@ class LocalModelDownloader(
                         }
                     }
                     output.flush()
+                    output.fd.sync()
                 }
             }
 
@@ -206,8 +213,14 @@ class LocalModelDownloader(
                 staging.delete()
                 throw IllegalStateException("Downloaded file is too small to be a model.")
             }
-            if (entry.sizeBytes > 0 && staging.length() < entry.sizeBytes * 8 / 10) {
-                throw IllegalStateException("Download looks incomplete. Try again.")
+            val got = staging.length()
+            val complete = LocalModelDownloadPolicy.isCompleteEnough(got, entry.sizeBytes) ||
+                (total > 0 && got >= total)
+            if (!complete) {
+                throw IllegalStateException(
+                    "Download looks incomplete (${LocalModelDownloadPolicy.formatBytes(got)}). " +
+                        "Tap Download to resume — the partial file is kept."
+                )
             }
             val file = store.promoteStaging(entry.fileName)
             _state.value = DownloadState.Succeeded(entry.id, file.name)

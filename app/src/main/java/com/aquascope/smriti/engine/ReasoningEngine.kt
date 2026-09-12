@@ -215,6 +215,7 @@ class ReasoningEngine(
     }
 
     private fun answerGeneral(query: MemoryQuery, events: List<PhysicalEvent>): SmritiAnswer {
+        val q = query.raw.lowercase(Locale.getDefault())
         if (events.isEmpty()) {
             return none(
                 "I don't have a record matching “${query.raw.trim()}” yet. " +
@@ -224,8 +225,13 @@ class ReasoningEngine(
         val preview = events.take(6).joinToString("\n") {
             "• ${fmt.format(Date(it.timestampMs))} — ${it.locationLabel}: ${it.summary}"
         }
+        val prefix = when {
+            q.contains("guardian") || q.contains("ir") || q.contains("blaster") ->
+                "From Guardian / IR records: "
+            else -> "About “${query.raw.trim()}”, here is what memory has (${events.size} related):\n"
+        }
         return SmritiAnswer(
-            text = "About “${query.raw.trim()}”, here is what memory has (${events.size} related):\n$preview",
+            text = prefix + if (prefix.startsWith("From")) "\n$preview" else preview,
             evidenceState = EvidenceState.OBSERVED,
             relatedEvents = events.take(6),
             evidence = evidenceEngine.forEvents(events.take(6), "Retrieved memories", EvidenceState.OBSERVED),

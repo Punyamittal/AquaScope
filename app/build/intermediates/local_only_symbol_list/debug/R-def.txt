@@ -366,6 +366,8 @@ string local_model_installed
 string local_model_redownload
 string local_model_reload
 string local_model_remove
+string local_model_replace_body
+string local_model_replace_title
 string local_model_save_token
 string local_model_subtitle
 string local_model_title

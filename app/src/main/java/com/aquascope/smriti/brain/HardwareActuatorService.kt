@@ -48,7 +48,7 @@ class HardwareActuatorService : Service() {
                     intent.getStringExtra(EXTRA_HAPTIC) ?: HAPTIC_TICK
                 )
                 ACTION_IR -> if (intent.getBooleanExtra(EXTRA_IR_ENABLED, false)) {
-                    actuators.transmitAcToggle()
+                    actuators.transmitAcToggle("service")
                 }
             }
         }
@@ -136,16 +136,33 @@ class HardwareActuators private constructor(context: Context) {
         vib.vibrate(effect)
     }
 
-    fun transmitAcToggle(): Boolean {
-        val mgr = ir ?: return false
-        if (!mgr.hasIrEmitter()) return false
+    fun irCapability(): String {
+        val mgr = ir ?: return "No IR emitter on this device"
+        if (!mgr.hasIrEmitter()) return "No IR emitter on this device"
+        val ranges = runCatching {
+            mgr.carrierFrequencies?.joinToString { "${it.minFrequency}-${it.maxFrequency}Hz" }
+        }.getOrNull().orEmpty()
+        return if (ranges.isBlank()) "IR emitter present (carrier list unavailable)"
+        else "IR emitter present · carriers $ranges"
+    }
+
+    fun transmitAcToggle(reason: String = "manual"): IrTransmitRecord {
+        val mgr = ir ?: return IrTransmitRecord(false, 0, 0, irCapability(), reason)
+        if (!mgr.hasIrEmitter()) return IrTransmitRecord(false, 0, 0, irCapability(), reason)
+        val carrier = pickCarrierHz(mgr, 38_000)
         return try {
-            // NEC-like 38 kHz power-toggle pattern (generic TV/AC). User must confirm appliance pairing.
-            mgr.transmit(38_000, NEC_POWER_TOGGLE)
-            true
-        } catch (_: Throwable) {
-            false
+            mgr.transmit(carrier, NEC_POWER_TOGGLE)
+            IrTransmitRecord(true, carrier, NEC_POWER_TOGGLE.size, irCapability(), reason)
+        } catch (t: Throwable) {
+            IrTransmitRecord(false, carrier, NEC_POWER_TOGGLE.size, t.message ?: irCapability(), reason)
         }
+    }
+
+    private fun pickCarrierHz(mgr: ConsumerIrManager, preferred: Int): Int {
+        val ranges = runCatching { mgr.carrierFrequencies }.getOrNull() ?: return preferred
+        if (ranges.any { preferred in it.minFrequency..it.maxFrequency }) return preferred
+        val first = ranges.firstOrNull() ?: return preferred
+        return ((first.minFrequency + first.maxFrequency) / 2).coerceAtLeast(first.minFrequency)
     }
 
     companion object {

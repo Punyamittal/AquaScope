@@ -204,7 +204,7 @@ class LocalModelActivity : SmritiScreenActivity() {
         LocalModelCatalog.downloadable.forEach { entry ->
             val card = ItemModelDownloadBinding.inflate(inflater, binding.containerDownloadModels, true)
             downloadCards[entry.id] = card
-            card.btnDownload.setOnClickListener { startDownload(entry) }
+            card.btnDownload.setOnClickListener { requestDownload(entry) }
             card.btnCancelDownload.setOnClickListener { smriti.modelDownloader.cancel() }
         }
     }
@@ -219,10 +219,18 @@ class LocalModelActivity : SmritiScreenActivity() {
                             smriti.llmPrefs.enabled = true
                             binding.switchUseLocal.isChecked = true
                             val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
+                            val installed = smriti.modelStore.isPresent(state.fileName) ||
+                                smriti.modelStore.findInstalled() != null
                             Toast.makeText(
                                 this@LocalModelActivity,
-                                if (smriti.isLocalLlmReady()) "Ready: ${state.fileName}"
-                                else "Downloaded ${state.fileName} — ${status.message}",
+                                when {
+                                    smriti.isLocalLlmReady() ->
+                                        "Installed and ready: ${state.fileName}"
+                                    installed ->
+                                        "Installed ${state.fileName}. Tap Reload if Ask still uses rules."
+                                    else ->
+                                        "Downloaded ${state.fileName} — ${status.message}"
+                                },
                                 Toast.LENGTH_LONG
                             ).show()
                             smriti.modelDownloader.consumeTerminal()
@@ -239,6 +247,23 @@ class LocalModelActivity : SmritiScreenActivity() {
                 }
             }
         }
+    }
+
+    private fun requestDownload(entry: LocalModelCatalog.Entry) {
+        if (smriti.modelStore.isPresent(entry.fileName)) {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.local_model_replace_title)
+                .setMessage(R.string.local_model_replace_body)
+                .setPositiveButton(R.string.local_model_redownload) { _, _ ->
+                    smriti.modelStore.fileFor(entry.fileName).delete()
+                    smriti.modelStore.stagingFile(entry.fileName).delete()
+                    startDownload(entry)
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return
+        }
+        startDownload(entry)
     }
 
     private fun startDownload(entry: LocalModelCatalog.Entry) {
@@ -286,7 +311,13 @@ class LocalModelActivity : SmritiScreenActivity() {
                         LocalModelDownloadPolicy.formatBytes(state.bytes)
                     }
                 }
-                installed -> card.btnDownload.text = getString(R.string.local_model_redownload)
+                installed -> {
+                    card.btnDownload.text = getString(R.string.local_model_installed)
+                    card.textDownloadProgress.visibility = View.VISIBLE
+                    val size = smriti.modelStore.fileFor(entry.fileName).length()
+                    card.textDownloadProgress.text =
+                        "On this phone · ${LocalModelDownloadPolicy.formatBytes(size)}"
+                }
                 else -> card.btnDownload.text = getString(R.string.local_model_download)
             }
         }
