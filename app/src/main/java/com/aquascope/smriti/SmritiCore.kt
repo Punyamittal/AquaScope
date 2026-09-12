@@ -1,16 +1,17 @@
 package com.aquascope.smriti
 
 import android.content.Context
+import android.util.Log
 import com.aquascope.dsp.AcousticFeatures
 import com.aquascope.smriti.engine.EvidenceEngine
 import com.aquascope.smriti.engine.EventNormalizer
 import com.aquascope.smriti.engine.ReasoningEngine
 import com.aquascope.smriti.engine.RetrievalEngine
+import com.aquascope.smriti.llm.IsolatedLlmClient
 import com.aquascope.smriti.llm.LocalLlmPreferences
 import com.aquascope.smriti.llm.LocalModelDownloader
 import com.aquascope.smriti.llm.LocalModelStatus
 import com.aquascope.smriti.llm.LocalModelStore
-import com.aquascope.smriti.llm.MediaPipeLocalLlm
 import com.aquascope.smriti.llm.SmritiAnswerComposer
 import com.aquascope.smriti.memory.EpisodicMemoryStore
 import com.aquascope.smriti.model.EventStatus
@@ -39,42 +40,64 @@ class SmritiCore(context: Context) {
     private val evidence = EvidenceEngine()
     private val reasoning = ReasoningEngine(evidence)
 
-    @Volatile private var localLlm: MediaPipeLocalLlm? = null
+    private val isolatedLlm = IsolatedLlmClient(appContext)
     @Volatile private var llmLoadAttempted = false
 
     fun modelStatus(): LocalModelStatus = modelStore.status()
 
-    /** Soft status without forcing a heavy MediaPipe load. */
+    /** Soft status without forcing a heavy MediaPipe load in the UI process. */
     fun modelStatusLight(): LocalModelStatus {
         val fileStatus = modelStore.status()
-        val llm = localLlm
         return when {
-            llm != null -> fileStatus.copy(message = "Local model ready: ${llm.modelLabel}")
-            fileStatus.ready && llmLoadAttempted -> fileStatus.copy(
+            isolatedLlm.crashedNative -> fileStatus.copy(
                 ready = false,
-                message = "Model file found but failed to load. Prefer Gemma 3 1B .task (MediaPipe)."
+                message = "Local model crashed in sandbox — Ask is using rules. Reload from System to retry."
+            )
+            isolatedLlm.isReady -> fileStatus.copy(
+                message = "Local model ready: ${isolatedLlm.modelLabel ?: fileStatus.displayName}"
+            )
+            fileStatus.ready && llmLoadAttempted -> fileStatus.copy(
+                ready = isolatedLlm.isReady,
+                message = if (isolatedLlm.isReady) fileStatus.message
+                else "Model file found. Sandbox not ready — Ask uses rules until it loads."
             )
             else -> fileStatus
         }
     }
 
     fun refreshLocalLlm(): LocalModelStatus {
-        localLlm?.close()
-        localLlm = null
         llmLoadAttempted = true
-        localLlm = MediaPipeLocalLlm.tryCreate(appContext, modelStore)
-        return modelStatusLight()
+        return try {
+            if (!llmPrefs.enabled) {
+                isolatedLlm.close()
+                return modelStatusLight()
+            }
+            isolatedLlm.reload()
+            modelStatusLight()
+        } catch (t: Throwable) {
+            modelStatusLight().copy(
+                ready = false,
+                message = "Local model failed to load: ${t.message ?: t.javaClass.simpleName}"
+            )
+        }
     }
 
-    private fun ensureLocalLlm() {
-        if (llmLoadAttempted) return
+    /** Warm the sandbox process. Never loads MediaPipe in the UI process. */
+    fun ensureLocalLlm() {
         if (!llmPrefs.enabled) return
         if (modelStore.findInstalled() == null) {
             llmLoadAttempted = true
             return
         }
-        refreshLocalLlm()
+        llmLoadAttempted = true
+        try {
+            isolatedLlm.ensureReady()
+        } catch (t: Throwable) {
+            Log.w("SmritiCore", "sandbox warmup failed", t)
+        }
     }
+
+    fun isLocalLlmReady(): Boolean = isolatedLlm.isReady
 
     fun rememberScan(
         locationId: String,
@@ -220,10 +243,29 @@ class SmritiCore(context: Context) {
         val query = retrieval.parse(question)
         val retrieved = retrieval.retrieve(query)
         val ruleAnswer = reasoning.answer(query, retrieved)
-        ensureLocalLlm()
-        val composer = SmritiAnswerComposer(localLlm, llmPrefs)
-        return composer.compose(question, ruleAnswer)
+        if (!llmPrefs.enabled) {
+            return ruleAnswer.copy(usedLocalModel = false, modelName = null)
+        }
+        // Wait for sandbox MediaPipe (separate process) so free-form Ask can use Qwen/Gemma.
+        val ready = try {
+            isolatedLlm.ensureReady()
+        } catch (t: Throwable) {
+            Log.w("SmritiCore", "LLM ensureReady failed", t)
+            false
+        }
+        if (!ready) {
+            return ruleAnswer.copy(usedLocalModel = false, modelName = null)
+        }
+        return try {
+            SmritiAnswerComposer(isolatedLlm, llmPrefs)
+                .compose(question, ruleAnswer, query.intent)
+        } catch (t: Throwable) {
+            Log.w("SmritiCore", "LLM compose failed", t)
+            ruleAnswer.copy(usedLocalModel = false, modelName = null)
+        }
     }
+
+    fun llmFailureHint(): String? = isolatedLlm.lastFailure()
 
     fun evidenceFor(eventId: String) =
         store.getEvent(eventId)?.let { evidence.forEvent(it) }

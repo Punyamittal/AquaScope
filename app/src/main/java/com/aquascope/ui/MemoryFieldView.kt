@@ -130,12 +130,17 @@ class MemoryFieldView @JvmOverloads constructor(
                 expressionTint = 1
                 density = (density + 0.18f).coerceAtMost(1f)
             }
-            com.aquascope.halo.SmritiLightState.ANOMALY,
+            com.aquascope.halo.SmritiLightState.ANOMALY -> {
+                expressionSpeed = 0.9f
+                expressionTint = 2
+                disturbance = (disturbance + 0.18f).coerceAtMost(0.7f)
+            }
+            com.aquascope.halo.SmritiLightState.HIGH_ANOMALY,
             com.aquascope.halo.SmritiLightState.PERSISTENT_ANOMALY,
             com.aquascope.halo.SmritiLightState.CONFIRMED -> {
-                expressionSpeed = 0.75f
+                expressionSpeed = 0.55f
                 expressionTint = 2
-                disturbance = (disturbance + 0.25f).coerceAtMost(1f)
+                disturbance = (disturbance + 0.35f).coerceAtMost(1f)
             }
             com.aquascope.halo.SmritiLightState.MEMORY_RECALL,
             com.aquascope.halo.SmritiLightState.NEW_MEMORY -> {
@@ -302,15 +307,14 @@ class MemoryFieldView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action != MotionEvent.ACTION_UP || nodes.isEmpty()) {
-            return nodes.isNotEmpty()
-        }
+        if (nodes.isEmpty()) return false
         val hitR = 28f * resources.displayMetrics.density
         val tapped = nodes.minByOrNull { node ->
             hypot(event.x - node.xFrac * width, event.y - node.yFrac * height)
-        } ?: return true
+        } ?: return false
         val dist = hypot(event.x - tapped.xFrac * width, event.y - tapped.yFrac * height)
-        if (dist <= hitR) {
+        if (dist > hitR) return false
+        if (event.action == MotionEvent.ACTION_UP) {
             selectedId = tapped.id
             invalidate()
             onNodeTap?.invoke(tapped)

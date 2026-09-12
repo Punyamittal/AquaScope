@@ -2,9 +2,12 @@ package com.aquascope.ui
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.aquascope.R
+import com.aquascope.baseline.AnomalyThresholds
 import com.aquascope.data.ScanLocation
 import com.aquascope.databinding.ItemLocationBinding
 
@@ -23,14 +26,51 @@ class LocationAdapter(
 
     inner class VH(private val b: ItemLocationBinding) : RecyclerView.ViewHolder(b.root) {
         fun bind(loc: ScanLocation) {
+            val ctx = b.root.context
             b.textLabel.text = loc.label
-            val scans = loc.scanHistory.size
+            val last = loc.scanHistory.maxByOrNull { it.timestamp }
             val baseline = loc.baselineFeatures.size
+            val scans = loc.scanHistory.size
+            val ago = last?.let { relativeTime(it.timestamp) }
+
             b.textInfo.text = when {
-                baseline == 0 -> "Baseline not set — scan once to calibrate"
-                scans == 0 -> "$baseline baseline sample${if (baseline == 1) "" else "s"} · ready to compare"
-                else -> "$baseline baseline · $scans scan${if (scans == 1) "" else "s"}"
+                baseline == 0 -> ctx.getString(R.string.scan_info_needs_baseline)
+                last == null -> ctx.getString(R.string.scan_info_ready, baseline)
+                else -> ctx.getString(
+                    R.string.scan_info_observed,
+                    scans,
+                    last.anomalyScore.toInt(),
+                    ago
+                )
             }
+
+            val (pill, pillColor, pillBg) = when {
+                baseline == 0 -> Triple(
+                    ctx.getString(R.string.scan_pill_baseline),
+                    R.color.amber,
+                    R.drawable.bg_result_warn
+                )
+                last != null && last.anomalyScore >= AnomalyThresholds.YELLOW_MAX -> Triple(
+                    ctx.getString(R.string.scan_pill_alert),
+                    R.color.amber,
+                    R.drawable.bg_result_warn
+                )
+                last != null && last.anomalyScore >= AnomalyThresholds.GREEN_MAX -> Triple(
+                    ctx.getString(R.string.scan_pill_watch),
+                    R.color.amber,
+                    R.drawable.bg_result_warn
+                )
+                else -> Triple(
+                    ctx.getString(R.string.scan_pill_ready),
+                    R.color.cyan,
+                    R.drawable.bg_pill_selected
+                )
+            }
+            b.textStatusPill.text = pill
+            b.textStatusPill.setTextColor(ContextCompat.getColor(ctx, pillColor))
+            b.textStatusPill.setBackgroundResource(pillBg)
+
+            b.cardPlace.setOnClickListener { onScan(loc) }
             b.btnScan.setOnClickListener { onScan(loc) }
             b.btnHistory.setOnClickListener { onHistory(loc) }
             b.btnDelete.setOnClickListener { onDelete(loc) }
@@ -42,4 +82,18 @@ class LocationAdapter(
     )
 
     override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(getItem(position))
+}
+
+internal fun relativeTime(timestamp: Long): String {
+    val delta = System.currentTimeMillis() - timestamp
+    val minutes = delta / 60_000
+    val hours = minutes / 60
+    val days = hours / 24
+    return when {
+        minutes < 1 -> "just now"
+        minutes < 60 -> "${minutes}m ago"
+        hours < 24 -> "${hours}h ago"
+        days == 1L -> "yesterday"
+        else -> "${days}d ago"
+    }
 }

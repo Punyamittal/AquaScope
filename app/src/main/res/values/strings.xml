@@ -3,6 +3,9 @@
     <string name="app_name">SMRITI AQUA</string>
     <string name="tagline">Your home has a memory.</string>
     <string name="smriti_home_title">SMRITI</string>
+    <string name="neural_core">Neural core</string>
+    <string name="neural_core_section">NEURAL CORE</string>
+    <string name="neural_core_blurb">Guardian, play capture, IR, and on-device recall live in this same app as acoustic sensing.</string>
     <string name="smriti_home_sub">HOME MEMORY</string>
     <string name="nav_home">Home</string>
     <string name="nav_scan">Scan</string>
@@ -17,7 +20,7 @@
     <string name="local_model_title">LOCAL MODEL</string>
     <string name="local_model_subtitle">Optional on-device model for natural phrasing. Retrieval and evidence stay the source of truth.</string>
     <string name="system_title">SYSTEM</string>
-    <string name="system_subtitle">iQOO 15 expression, local intelligence, and privacy.</string>
+    <string name="system_subtitle">iQOO 15 expression, neural core, local intelligence, and privacy.</string>
     <string name="halo_section_title">SMRITI LIGHT · MONSTER HALO</string>
     <string name="halo_enable">Monster Halo</string>
     <string name="halo_night">Disable physical light (night / privacy)</string>
@@ -29,7 +32,7 @@
     <string name="halo_preview">Preview state cycle</string>
     <string name="halo_test_solid">Test physical light (solid cyan)</string>
     <string name="halo_open_settings">Open OriginOS rear light settings</string>
-    <string name="halo_legend">cyan = normal · blue = sensing · purple = processing · white = memory · amber = anomaly · red = confirmed · teal = recall · neutral white = unknown</string>
+    <string name="halo_legend" formatted="false">cyan = normal · amber pulse = anomaly under 50% · amber-red chase = anomaly 50% or more · red = confirmed / persistent · teal = recall · white = unknown</string>
     <string name="halo_photo_cd">iQOO 15 Monster Halo light around the rear camera</string>
     <string name="halo_photo_caption">Monster Halo sits around the rear camera island. Your phone communicates SMRITI\'s state through this physical light.</string>
     <string name="scan_initializing">INITIALIZING SENSOR</string>
@@ -68,11 +71,28 @@
     <string name="recent_memory">RECENT MEMORY</string>
     <string name="home_status">HOME STATUS</string>
     <string name="locations_heading">ACOUSTIC SCAN</string>
-    <string name="empty_locations_title">No scan locations yet</string>
-    <string name="empty_locations_body">Create a location, set a dry baseline, then compare later scans. SMRITI will remember what AquaScope observes.</string>
+    <string name="scan_section_subtitle">Hold the bottom of the phone flush against a wall or pipe so the bottom speaker and mic both touch the surface.</string>
+    <string name="scan_places_eyebrow">PLACES IN MEMORY</string>
+    <string name="scan_empty_eyebrow">AQUASCOPE</string>
+    <string name="scan_summary_places">%1$d places · %2$d calibrated</string>
+    <string name="scan_summary_one">1 place · %1$d calibrated</string>
+    <string name="scan_last_observation">Last observation · %1$s · %2$s</string>
+    <string name="scan_no_observations">No observations yet — scan a calibrated place.</string>
+    <string name="scan_action">Scan</string>
+    <string name="history_action">History</string>
+    <string name="remove_action">Remove</string>
+    <string name="scan_pill_baseline">BASELINE</string>
+    <string name="scan_pill_ready">READY</string>
+    <string name="scan_pill_watch">WATCH</string>
+    <string name="scan_pill_alert">ANOMALY</string>
+    <string name="scan_info_needs_baseline">Scan once while dry to calibrate this place</string>
+    <string name="scan_info_ready">%d baseline samples · ready to compare</string>
+    <string name="scan_info_observed">%1$d scans · last %2$d%% · %3$s</string>
+    <string name="empty_locations_title">No places yet</string>
+    <string name="empty_locations_body">Name a wall or pipe, set a dry baseline, then return later. SMRITI remembers what AquaScope observes.</string>
     <string name="new_location">New location</string>
     <string name="start_scan">Begin scan</string>
-    <string name="hold_instruction">Press the phone flat against the wall or pipe so the speaker and mic both touch the surface.</string>
+    <string name="hold_instruction">Press the bottom edge of the phone against the wall or pipe so the bottom speaker and mic both touch the surface.</string>
     <string name="scanning">SCANNING</string>
     <string name="analyzing">COMPARING TO BASELINE</string>
     <string name="anomaly_score">ANOMALY SCORE</string>

@@ -4,8 +4,8 @@ import kotlin.math.*
 
 /**
  * Generates a logarithmic sine sweep (chirp) from startFreq to endFreq.
- * Defaults are tuned for **iQOO 15** dual stereo / Snapdragon audio path
- * (see [IqooDeviceProfile]).
+ * Defaults are tuned for the **iQOO 15 bottom speaker + bottom mic**
+ * (see [IqooDeviceProfile], [IqooAudioRouting]).
  */
 object ChirpGenerator {
 

@@ -82,6 +82,8 @@ object AnomalyScorer {
 // TODO: Threshold constants for UI color coding — tune with real data
 object AnomalyThresholds {
     const val GREEN_MAX = 30.0
+    /** Monster Halo splits mild amber vs high amber-red at this score. */
+    const val HALO_HIGH = 50.0
     const val YELLOW_MAX = 70.0
-    // Above YELLOW_MAX = red
+    // Above YELLOW_MAX = red in scan UI
 }

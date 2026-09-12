@@ -5,6 +5,16 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.TRANSMIT_IR" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <uses-feature android:name="android.hardware.consumerir" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -15,7 +25,6 @@
         android:theme="@style/Theme.AquaScope"
         android:name=".AquaScopeApp">
 
-        <!-- GPU OpenCL for MediaPipe / local Gemma on Snapdragon (iQOO 15) -->
         <uses-native-library
             android:name="libOpenCL.so"
             android:required="false" />
@@ -44,6 +53,26 @@
         <activity android:name=".ui.AskSmritiActivity" />
         <activity android:name=".ui.EvidenceActivity" />
         <activity android:name=".ui.LocalModelActivity" />
+        <activity
+            android:name=".smriti.brain.SmritiBrainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AquaScope" />
+
+        <service
+            android:name=".smriti.brain.HardwareActuatorService"
+            android:exported="false" />
+        <service
+            android:name=".smriti.brain.CaptureProjectionService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+        <service
+            android:name=".smriti.brain.GuardianService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+        <service
+            android:name=".smriti.llm.LlmSandboxService"
+            android:exported="false"
+            android:process=":smriti_llm" />
 
     </application>
 

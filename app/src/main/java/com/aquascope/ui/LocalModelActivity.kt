@@ -9,7 +9,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -22,10 +21,12 @@ import com.aquascope.smriti.llm.DownloadState
 import com.aquascope.smriti.llm.LocalModelCatalog
 import com.aquascope.smriti.llm.LocalModelDownloadPolicy
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
-class LocalModelActivity : AppCompatActivity() {
+class LocalModelActivity : SmritiScreenActivity() {
 
     private lateinit var binding: ActivityLocalModelBinding
     private lateinit var smriti: SmritiCore
@@ -47,13 +48,15 @@ class LocalModelActivity : AppCompatActivity() {
         }
         try {
             val file = smriti.modelStore.importFromUri(this, uri)
-            val status = smriti.refreshLocalLlm()
-            Toast.makeText(
-                this,
-                if (status.ready) "Loaded ${file.name}" else "Imported ${file.name} but load failed",
-                Toast.LENGTH_LONG
-            ).show()
-            refreshUi()
+            lifecycleScope.launch {
+                val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
+                Toast.makeText(
+                    this@LocalModelActivity,
+                    if (status.ready) "Loaded ${file.name}" else "Imported ${file.name} but load failed",
+                    Toast.LENGTH_LONG
+                ).show()
+                refreshUi(reloadModel = false)
+            }
         } catch (t: Throwable) {
             Toast.makeText(this, t.message ?: "Import failed", Toast.LENGTH_LONG).show()
         }
@@ -66,6 +69,9 @@ class LocalModelActivity : AppCompatActivity() {
         smriti = SmritiCore.get(this)
         SmritiNav.bind(this, binding.bottomNav, SmritiNav.TAB_SYSTEM)
         haloBind = HaloBinding(this, binding.haloIndicator)
+        binding.btnOpenNeuralCore.setOnClickListener {
+            SmritiNav.openNeuralCore(this)
+        }
 
         val halo = haloBind.controller()
         binding.switchHaloEnabled.isChecked = halo.prefs.enabled
@@ -125,16 +131,25 @@ class LocalModelActivity : AppCompatActivity() {
         }
         binding.btnImportModel.setOnClickListener { pickModel.launch(arrayOf("*/*")) }
         binding.btnReload.setOnClickListener {
-            smriti.refreshLocalLlm()
-            refreshUi()
-            Toast.makeText(this, "Reloaded", Toast.LENGTH_SHORT).show()
+            binding.textModelStatus.text = "Loading local model…"
+            lifecycleScope.launch {
+                val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
+                bindModelStatus(status)
+                Toast.makeText(
+                    this@LocalModelActivity,
+                    if (smriti.isLocalLlmReady()) "Local model ready" else status.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
         binding.btnRemove.setOnClickListener {
             smriti.modelDownloader.cancel()
             smriti.modelStore.deleteAll()
-            smriti.refreshLocalLlm()
-            refreshUi()
-            Toast.makeText(this, "Model removed — Ask uses rules only", Toast.LENGTH_SHORT).show()
+            lifecycleScope.launch {
+                withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
+                refreshUi(reloadModel = false)
+                Toast.makeText(this@LocalModelActivity, "Model removed — Ask uses rules only", Toast.LENGTH_SHORT).show()
+            }
         }
         binding.btnSaveToken.setOnClickListener { saveTokenFromField() }
         binding.btnGetToken.setOnClickListener { openUrl(LocalModelCatalog.HF_TOKEN_URL) }
@@ -185,10 +200,11 @@ class LocalModelActivity : AppCompatActivity() {
                     applyDownloadState(state)
                     when (state) {
                         is DownloadState.Succeeded -> {
-                            val status = smriti.refreshLocalLlm()
+                            val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
                             Toast.makeText(
                                 this@LocalModelActivity,
-                                if (status.ready) "Ready: ${state.fileName}" else "Downloaded ${state.fileName} — reload if Ask still uses rules",
+                                if (smriti.isLocalLlmReady()) "Ready: ${state.fileName}"
+                                else "Downloaded ${state.fileName} — ${status.message}",
                                 Toast.LENGTH_LONG
                             ).show()
                             smriti.modelDownloader.consumeTerminal()
@@ -356,6 +372,7 @@ class LocalModelActivity : AppCompatActivity() {
             SmritiLightState.PROCESSING,
             SmritiLightState.NEW_MEMORY,
             SmritiLightState.ANOMALY,
+            SmritiLightState.HIGH_ANOMALY,
             SmritiLightState.PERSISTENT_ANOMALY,
             SmritiLightState.CONFIRMED,
             SmritiLightState.MEMORY_RECALL,
@@ -377,7 +394,18 @@ class LocalModelActivity : AppCompatActivity() {
     }
 
     private fun refreshUi(reloadModel: Boolean = true) {
-        val status = if (reloadModel) smriti.refreshLocalLlm() else smriti.modelStatusLight()
+        if (!reloadModel) {
+            bindModelStatus(smriti.modelStatusLight())
+            return
+        }
+        binding.textModelStatus.text = "Loading local model…"
+        lifecycleScope.launch {
+            val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
+            bindModelStatus(status)
+        }
+    }
+
+    private fun bindModelStatus(status: com.aquascope.smriti.llm.LocalModelStatus) {
         val sizeMb = if (status.sizeBytes > 0) {
             String.format(Locale.US, "%.0f MB", status.sizeBytes / (1024.0 * 1024.0))
         } else "—"
@@ -387,7 +415,7 @@ class LocalModelActivity : AppCompatActivity() {
             append("\n\n")
             append("Path: ${status.path ?: smriti.modelStore.rootDir().absolutePath}")
             append("\nSize: $sizeMb")
-            append("\nRephrase: ${if (smriti.llmPrefs.enabled && status.ready) "ON" else "OFF (rules only)"}")
+            append("\nRephrase: ${if (smriti.llmPrefs.enabled && smriti.isLocalLlmReady()) "ON" else "OFF (rules only)"}")
             append("\n\nRecommended for iQOO 15 (12 GB): ${rec.displayName}")
             append("\nFile name: ${rec.fileName}")
         }

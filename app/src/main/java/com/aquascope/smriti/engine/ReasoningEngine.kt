@@ -216,16 +216,19 @@ class ReasoningEngine(
 
     private fun answerGeneral(query: MemoryQuery, events: List<PhysicalEvent>): SmritiAnswer {
         if (events.isEmpty()) {
-            return none("I don't have a record matching “${query.raw.trim()}”.")
+            return none(
+                "I don't have a record matching “${query.raw.trim()}” yet. " +
+                    "Run a scan or ask about a location I already remember."
+            )
         }
-        val preview = events.take(4).joinToString("\n") {
-            "• ${fmt.format(Date(it.timestampMs))} — ${it.summary}"
+        val preview = events.take(6).joinToString("\n") {
+            "• ${fmt.format(Date(it.timestampMs))} — ${it.locationLabel}: ${it.summary}"
         }
         return SmritiAnswer(
-            text = "I found ${events.size} relevant memories:\n$preview",
+            text = "About “${query.raw.trim()}”, here is what memory has (${events.size} related):\n$preview",
             evidenceState = EvidenceState.OBSERVED,
-            relatedEvents = events.take(4),
-            evidence = evidenceEngine.forEvents(events.take(4), "Retrieved memories", EvidenceState.OBSERVED),
+            relatedEvents = events.take(6),
+            evidence = evidenceEngine.forEvents(events.take(6), "Retrieved memories", EvidenceState.OBSERVED),
             suggestedActions = listOf("Ask: Has this happened before?", "Ask: Is it definitely a leak?")
         )
     }

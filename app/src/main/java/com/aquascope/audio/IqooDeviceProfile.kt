@@ -28,14 +28,14 @@ object IqooDeviceProfile {
 
     /**
      * Phone speakers are weak below ~80–100 Hz; start a bit above 20 Hz for better SNR
-     * on contact sensing with dual stereo hardware.
+     * on contact sensing with the bottom speaker.
      */
     const val CHIRP_START_HZ = 80.0
 
     /** Upper bound well within phone speaker + mic bandwidth; below Nyquist at 48 kHz. */
     const val CHIRP_END_HZ = 16000.0
 
-    /** Slightly longer chirp for more energy into the surface on flagship speakers. */
+    /** Slightly longer chirp for more energy into the surface on the bottom speaker. */
     const val CHIRP_DURATION_SEC = 1.6
 
     /** Extra mic window after chirp ends for decay capture. */

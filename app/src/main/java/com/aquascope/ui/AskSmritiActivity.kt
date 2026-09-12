@@ -2,11 +2,11 @@ package com.aquascope.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.aquascope.R
 import com.aquascope.databinding.ActivityAskSmritiBinding
@@ -14,12 +14,13 @@ import com.aquascope.halo.SmritiLightMapper
 import com.aquascope.halo.SmritiLightState
 import com.aquascope.smriti.SmritiCore
 import com.aquascope.smriti.model.EvidenceState
+import com.aquascope.smriti.model.SmritiAnswer
 import com.google.android.material.chip.Chip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class AskSmritiActivity : AppCompatActivity() {
+class AskSmritiActivity : SmritiScreenActivity() {
 
     private lateinit var binding: ActivityAskSmritiBinding
     private lateinit var smriti: SmritiCore
@@ -80,10 +81,21 @@ class AskSmritiActivity : AppCompatActivity() {
         }
 
         showIdleHero()
+
+        // Warm MediaPipe in :smriti_llm only. A native crash there must not kill Ask.
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { smriti.ensureLocalLlm() }
+            withContext(Dispatchers.Main) {
+                if (!isFinishing && !isDestroyed) refreshModelBadge()
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        if (!answering && binding.orbView.visibility == View.VISIBLE) {
+            binding.orbView.onResume()
+        }
         haloBind.start()
         if (!answering) {
             haloBind.controller().setState(SmritiLightState.NORMAL)
@@ -94,31 +106,48 @@ class AskSmritiActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        if (binding.orbView.visibility == View.VISIBLE) {
+            binding.orbView.onPause()
+        }
         haloBind.stop()
         super.onPause()
     }
 
     private fun showIdleHero() {
         answering = false
+        binding.orbView.visibility = View.VISIBLE
+        binding.orbView.onResume()
+        binding.orbView.setPaused(false)
+        binding.orbView.setActive(false)
+        binding.orbView.setPulse(0.55f)
         binding.heroCopy.visibility = View.VISIBLE
         binding.scrollChips.visibility = View.VISIBLE
         binding.scrollAnswer.visibility = View.GONE
-        binding.orbView.setActive(false)
-        binding.orbView.setPulse(0.55f)
     }
 
     private fun showAnswerMode() {
         answering = true
+        hideBlackHole()
         binding.heroCopy.visibility = View.GONE
         binding.scrollChips.visibility = View.GONE
         binding.scrollAnswer.visibility = View.VISIBLE
+    }
+
+    private fun hideBlackHole() {
+        try {
+            binding.orbView.setPaused(true)
+            binding.orbView.visibility = View.GONE
+        } catch (t: Throwable) {
+            Log.e(TAG, "hide orb failed", t)
+        }
     }
 
     private fun refreshModelBadge() {
         val status = smriti.modelStatusLight()
         val mode = when {
             !smriti.llmPrefs.enabled -> "Rules"
-            status.ready -> "Local"
+            smriti.isLocalLlmReady() -> "Local"
+            status.ready -> "Local…"
             else -> "System"
         }
         binding.textModelBadge.text = mode
@@ -133,20 +162,39 @@ class AskSmritiActivity : AppCompatActivity() {
 
     private fun ask(question: String) {
         binding.btnAsk.isEnabled = false
-        binding.orbView.setActive(true)
-        binding.orbView.setPulse(0.9f)
+        hideBlackHole()
+        binding.heroCopy.visibility = View.GONE
+        binding.scrollChips.visibility = View.GONE
         haloBind.controller().setState(SmritiLightState.MEMORY_RECALL)
+        if (smriti.llmPrefs.enabled && smriti.modelStore.findInstalled() != null && !smriti.isLocalLlmReady()) {
+            Toast.makeText(this, "Loading local model… first answer may take a minute", Toast.LENGTH_SHORT).show()
+        }
         lifecycleScope.launch {
-            val answer = withContext(Dispatchers.Default) {
-                smriti.ask(question)
+            val answer = try {
+                withContext(Dispatchers.Default) {
+                    smriti.ask(question)
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "Ask failed", t)
+                SmritiAnswer(
+                    text = "I couldn't finish that with the local model. Try again, or open System and reload the model.",
+                    evidenceState = EvidenceState.UNKNOWN,
+                    relatedEvents = emptyList(),
+                    evidence = null
+                )
+            } finally {
+                if (!isFinishing && !isDestroyed) binding.btnAsk.isEnabled = true
             }
-            binding.btnAsk.isEnabled = true
+
+            if (isFinishing || isDestroyed) return@launch
+
             showAnswerMode()
             binding.textAsked.text = question
 
             val settle = SmritiLightMapper.fromAsk(
                 answer.evidenceState,
-                answer.relatedEvents.size
+                answer.relatedEvents.size,
+                answer.relatedEvents.maxOfOrNull { it.anomalyScore } ?: 0.0
             )
             if (settle == SmritiLightState.UNKNOWN) {
                 binding.textEvidenceState.text = getString(R.string.insufficient_evidence)
@@ -166,15 +214,33 @@ class AskSmritiActivity : AppCompatActivity() {
             lastEvidenceEventId = answer.relatedEvents.firstOrNull()?.id
             binding.btnWhy.visibility = if (lastEvidenceEventId != null) View.VISIBLE else View.GONE
 
-            binding.orbView.setActive(false)
-            binding.orbView.setPulse(if (settle == SmritiLightState.UNKNOWN) 0.35f else 0.7f)
-
             if (answer.relatedEvents.isNotEmpty()) {
                 haloBind.controller().setStateBrief(SmritiLightState.NEW_MEMORY, settle, 500L)
             } else {
                 haloBind.controller().setState(settle)
             }
             refreshModelBadge()
+            if (smriti.llmPrefs.enabled && !answer.usedLocalModel && smriti.modelStore.findInstalled() != null) {
+                if (!smriti.isLocalLlmReady()) {
+                    val hint = smriti.llmFailureHint()
+                        ?: smriti.modelStatusLight().message
+                    Toast.makeText(
+                        this@AskSmritiActivity,
+                        "Rules answer — local model unavailable. $hint",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } else if (answer.usedLocalModel) {
+                Toast.makeText(
+                    this@AskSmritiActivity,
+                    "Answered with ${answer.modelName ?: "local model"}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
+    }
+
+    companion object {
+        private const val TAG = "AskSmriti"
     }
 }

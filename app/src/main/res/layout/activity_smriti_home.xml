@@ -21,6 +21,8 @@
         android:id="@+id/headerHome"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:clickable="true"
+        android:elevation="10dp"
         android:gravity="center_horizontal"
         android:orientation="vertical"
         android:paddingTop="18dp"
@@ -31,6 +33,7 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
+            android:id="@+id/textSmritiTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-light"
@@ -79,6 +82,8 @@
         android:paddingTop="18dp"
         android:paddingEnd="22dp"
         android:paddingBottom="18dp"
+        android:clickable="true"
+        android:elevation="12dp"
         app:layout_constraintBottom_toTopOf="@id/nodePanel"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
@@ -110,6 +115,14 @@
             android:lineSpacingExtra="4dp"
             android:textColor="@color/navy_mid"
             android:textSize="13sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNeuralCore"
+            style="@style/Widget.AquaScope.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/neural_core" />
     </LinearLayout>
 
     <LinearLayout

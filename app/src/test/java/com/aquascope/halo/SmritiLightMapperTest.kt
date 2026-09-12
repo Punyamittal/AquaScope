@@ -25,7 +25,7 @@ class SmritiLightMapperTest {
     fun `effect json for scanning is non-empty marquee`() {
         val json = HaloEffectJson.forState(SmritiLightState.SCANNING, 60)
         assertTrue(json.contains("marquee"))
-        assertTrue(json.contains("smriti_aqua"))
+        assertTrue(json.contains("monster_halo"))
         assertTrue(json.contains("\"subType\":0"))
     }
 
@@ -40,6 +40,31 @@ class SmritiLightMapperTest {
         val render = HaloPalette.render(SmritiLightState.NORMAL, 0.65f)
         assertTrue(render.brightness >= 0.82f)
         assertEquals(900, render.periodMs)
+    }
+
+    @Test
+    fun `score below 50 percent uses mild amber not high chase`() {
+        assertEquals(SmritiLightState.ANOMALY, SmritiLightMapper.fromScore(31.0))
+        assertEquals(SmritiLightState.ANOMALY, SmritiLightMapper.fromScore(49.0))
+        val mild = HaloEffectJson.forState(SmritiLightState.ANOMALY, 80)
+        val high = HaloEffectJson.forState(SmritiLightState.HIGH_ANOMALY, 80)
+        assertTrue(mild.contains("\"subType\":2"))
+        assertTrue(high.contains("\"subType\":0"))
+        assertTrue(mild.contains(HaloPalette.rgbHex(HaloPalette.AMBER)))
+        assertTrue(high.contains(HaloPalette.rgbHex(HaloPalette.RED_RESTRAINED)))
+        assertTrue(mild != high)
+    }
+
+    @Test
+    fun `score at or above 50 percent uses high anomaly chase`() {
+        assertEquals(SmritiLightState.HIGH_ANOMALY, SmritiLightMapper.fromScore(50.0))
+        assertEquals(SmritiLightState.HIGH_ANOMALY, SmritiLightMapper.fromScore(80.0))
+        assertEquals(SmritiLightState.PERSISTENT_ANOMALY, SmritiLightMapper.fromScore(62.0, priorAnomalies = 1))
+        val renderHigh = HaloPalette.render(SmritiLightState.HIGH_ANOMALY, 0.65f)
+        val renderMild = HaloPalette.render(SmritiLightState.ANOMALY, 0.65f)
+        assertEquals(HaloPalette.MOTION_SWEEP, renderHigh.motion)
+        assertEquals(HaloPalette.MOTION_BREATHE, renderMild.motion)
+        assertTrue(renderHigh.periodMs < renderMild.periodMs)
     }
 
     @Test

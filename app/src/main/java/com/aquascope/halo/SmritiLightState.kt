@@ -13,9 +13,11 @@ enum class SmritiLightState {
     PROCESSING,
     /** Soft white flash — episodic memory written */
     NEW_MEMORY,
-    /** Amber slow pulse — something changed */
+    /** Amber slow pulse — deviation below 50% */
     ANOMALY,
-    /** Deeper amber, slower — change persists */
+    /** Amber→red chase — deviation at or above 50% */
+    HIGH_ANOMALY,
+    /** Deeper red pulse — change persists or possible leak */
     PERSISTENT_ANOMALY,
     /** Restrained warm red — user-confirmed issue */
     CONFIRMED,
@@ -23,6 +25,16 @@ enum class SmritiLightState {
     MEMORY_RECALL,
     /** Neutral white, low — insufficient evidence (not danger) */
     UNKNOWN,
+    /** Pulsing cyan — OCR / cognitive extraction */
+    EXTRACTION,
+    /** Vivid crimson — game kill / clutch buffer */
+    GAME_KILL,
+    /** Amber — health / medication verified */
+    HEALTH_OK,
+    /** Deep emerald — guardian ambient listening */
+    GUARDIAN,
+    /** Fast strobe white — fall / glass / alarm */
+    EMERGENCY,
     /** Lights off / night / privacy */
     OFF
 }
@@ -43,6 +55,8 @@ object HaloPalette {
     const val CYAN = 0xFF4AAFC2.toInt()
     const val CYAN_BRIGHT = 0xFF8EF2FF.toInt()
     const val CYAN_BLOOM = 0xFFC8FCFF.toInt()
+    /** Hardware LED cyan used by OriginOS / monster_halo presets. */
+    const val CYAN_HW = 0xFF00E5FF.toInt()
     const val BLUE = 0xFF2E6FA8.toInt()
     const val PURPLE = 0xFF7B5EA7.toInt()
     const val WARM_WHITE = 0xFFF5F5F0.toInt()
@@ -51,6 +65,11 @@ object HaloPalette {
     const val RED_RESTRAINED = 0xFFB84A3A.toInt()
     const val TEAL = 0xFF3AAFA0.toInt()
     const val NEUTRAL_WHITE = 0xFFD0D0D0.toInt()
+    const val PHOSPHOR_CYAN = 0xFF00F0FF.toInt()
+    const val CRIMSON = 0xFFFF003C.toInt()
+    const val AMBER_HEALTH = 0xFFFFB800.toInt()
+    const val EMERALD = 0xFF00C853.toInt()
+    const val STROBE_WHITE = 0xFFFFFFFF.toInt()
     const val OFF = 0xFF000000.toInt()
 
     const val MOTION_SOLID = 0
@@ -73,10 +92,13 @@ object HaloPalette {
                 state, WARM_WHITE, WARM_WHITE, 0.7f * b, MOTION_SOLID, 600, "Memory"
             )
             SmritiLightState.ANOMALY -> HaloRender(
-                state, AMBER, AMBER, 0.5f * b, MOTION_BREATHE, 2800, "Anomaly"
+                state, AMBER, AMBER, 0.5f * b, MOTION_BREATHE, 2800, "Anomaly <50%"
+            )
+            SmritiLightState.HIGH_ANOMALY -> HaloRender(
+                state, RED_RESTRAINED, AMBER_DEEP, 0.85f * b, MOTION_SWEEP, 480, "Anomaly ≥50%"
             )
             SmritiLightState.PERSISTENT_ANOMALY -> HaloRender(
-                state, AMBER_DEEP, AMBER, 0.55f * b, MOTION_BREATHE, 4200, "Persistent"
+                state, AMBER_DEEP, RED_RESTRAINED, 0.7f * b, MOTION_BREATHE, 1600, "Persistent"
             )
             SmritiLightState.CONFIRMED -> HaloRender(
                 state, RED_RESTRAINED, AMBER_DEEP, 0.45f * b, MOTION_BREATHE, 2200, "Confirmed"
@@ -86,6 +108,21 @@ object HaloPalette {
             )
             SmritiLightState.UNKNOWN -> HaloRender(
                 state, NEUTRAL_WHITE, NEUTRAL_WHITE, 0.22f * b, MOTION_SOLID, 2000, "Unknown"
+            )
+            SmritiLightState.EXTRACTION -> HaloRender(
+                state, PHOSPHOR_CYAN, CYAN_HW, 0.85f * b, MOTION_BREATHE, 520, "Extract"
+            )
+            SmritiLightState.GAME_KILL -> HaloRender(
+                state, CRIMSON, RED_RESTRAINED, 0.9f * b, MOTION_SOLID, 280, "Kill"
+            )
+            SmritiLightState.HEALTH_OK -> HaloRender(
+                state, AMBER_HEALTH, AMBER, 0.7f * b, MOTION_BREATHE, 1400, "Health"
+            )
+            SmritiLightState.GUARDIAN -> HaloRender(
+                state, EMERALD, TEAL, 0.45f * b, MOTION_BREATHE, 2400, "Guardian"
+            )
+            SmritiLightState.EMERGENCY -> HaloRender(
+                state, STROBE_WHITE, CRIMSON, 1f, MOTION_SOLID, 120, "Emergency"
             )
             SmritiLightState.OFF -> HaloRender(
                 state, OFF, OFF, 0f, MOTION_SOLID, 1000, "Off"

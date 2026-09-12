@@ -31,15 +31,14 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.aquascope.ui.SmritiOrbView
+    <com.aquascope.ui.ShootingStarsView
         android:id="@+id/orbView"
         android:layout_width="0dp"
-        android:layout_height="260dp"
-        android:layout_marginTop="28dp"
+        android:layout_height="220dp"
+        android:layout_marginTop="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/textModelBadge"
-        app:layout_constraintWidth_percent="0.78" />
+        app:layout_constraintTop_toBottomOf="@id/textModelBadge" />
 
     <LinearLayout
         android:id="@+id/heroCopy"
@@ -49,6 +48,7 @@
         android:orientation="vertical"
         android:paddingStart="28dp"
         android:paddingEnd="28dp"
+        android:layout_marginTop="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/orbView">
@@ -66,20 +66,20 @@
             android:id="@+id/textPrompt"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="8dp"
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
             android:lineSpacingMultiplier="1.15"
             android:text="@string/ask_help_prompt"
             android:textColor="@color/warm_white"
-            android:textSize="28sp" />
+            android:textSize="26sp" />
     </LinearLayout>
 
     <HorizontalScrollView
         android:id="@+id/scrollChips"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
+        android:layout_marginTop="12dp"
         android:clipToPadding="false"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
@@ -101,7 +101,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="24dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="8dp"
         android:fillViewport="false"
@@ -109,7 +109,7 @@
         app:layout_constraintBottom_toTopOf="@id/inputBar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/orbView">
+        app:layout_constraintTop_toBottomOf="@id/textModelBadge">
 
         <LinearLayout
             android:id="@+id/cardAnswer"

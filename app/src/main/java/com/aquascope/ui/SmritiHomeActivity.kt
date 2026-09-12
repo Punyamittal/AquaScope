@@ -3,9 +3,9 @@ package com.aquascope.ui
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import com.aquascope.R
 import com.aquascope.databinding.ActivitySmritiHomeBinding
+import com.aquascope.baseline.AnomalyThresholds
 import com.aquascope.halo.SmritiLightMapper
 import com.aquascope.halo.SmritiLightState
 import com.aquascope.smriti.SmritiCore
@@ -14,7 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class SmritiHomeActivity : AppCompatActivity() {
+class SmritiHomeActivity : SmritiScreenActivity() {
 
     private lateinit var binding: ActivitySmritiHomeBinding
     private lateinit var smriti: SmritiCore
@@ -45,6 +45,12 @@ class SmritiHomeActivity : AppCompatActivity() {
                 startActivity(Intent(this, MemoryTimelineActivity::class.java))
             }
         }
+        binding.headerHome.bringToFront()
+        binding.statusBlock.bringToFront()
+        binding.nodePanel.bringToFront()
+        binding.bottomNav.bringToFront()
+        binding.textSmritiTitle.setOnClickListener { SmritiNav.openNeuralCore(this) }
+        binding.btnNeuralCore.setOnClickListener { SmritiNav.openNeuralCore(this) }
     }
 
     override fun onResume() {
@@ -89,7 +95,14 @@ class SmritiHomeActivity : AppCompatActivity() {
         }
         binding.memoryField.setField(fieldNodes, snap.disturbance, snap.density)
 
-        val light = SmritiLightMapper.fromHomeStatus(snap.statusLine, snap.anomaliesObserved)
+        val maxScore = snap.nodes.mapNotNull { node ->
+            node.latest?.anomalyScore?.takeIf { node.pulse == MemoryNodeState.PULSE_ANOMALY }
+        }.maxOrNull() ?: 0.0
+        val light = SmritiLightMapper.fromHomeStatus(
+            snap.statusLine,
+            snap.anomaliesObserved,
+            maxScore
+        )
         haloBind.controller().setState(light)
         binding.memoryField.syncExpression(light)
 
@@ -116,7 +129,13 @@ class SmritiHomeActivity : AppCompatActivity() {
         }
         binding.textNodeState.text = acoustic
         binding.textNodeState.setTextColor(
-            getColor(if (state.pulse == MemoryNodeState.PULSE_ANOMALY) R.color.amber else R.color.cyan)
+            getColor(
+                when {
+                    state.pulse != MemoryNodeState.PULSE_ANOMALY -> R.color.cyan
+                    (latest?.anomalyScore ?: 0.0) >= AnomalyThresholds.HALO_HIGH -> R.color.status_alert
+                    else -> R.color.amber
+                }
+            )
         )
         binding.textNodeDeviation.text = when {
             latest == null -> "No scan remembered yet"
@@ -127,7 +146,10 @@ class SmritiHomeActivity : AppCompatActivity() {
             if (latest != null) View.VISIBLE else View.GONE
 
         val nodeLight = when (state.pulse) {
-            MemoryNodeState.PULSE_ANOMALY -> SmritiLightState.ANOMALY
+            MemoryNodeState.PULSE_ANOMALY ->
+                SmritiLightMapper.fromScore(
+                    (latest?.anomalyScore ?: 0.0).coerceAtLeast(AnomalyThresholds.GREEN_MAX)
+                )
             MemoryNodeState.PULSE_ACTIVE -> SmritiLightState.MEMORY_RECALL
             else -> SmritiLightState.NORMAL
         }

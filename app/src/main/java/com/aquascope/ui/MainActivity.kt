@@ -6,18 +6,18 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.aquascope.R
 import com.aquascope.data.ScanLocation
 import com.aquascope.data.ScanRepository
 import com.aquascope.databinding.ActivityMainBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : SmritiScreenActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var repo: ScanRepository
@@ -49,15 +49,47 @@ class MainActivity : AppCompatActivity() {
         SmritiNav.bind(this, binding.bottomNav, SmritiNav.TAB_SCAN)
 
         ensureAudioPermission()
+        refreshPlaces()
     }
 
     override fun onResume() {
         super.onResume()
+        refreshPlaces()
+    }
+
+    private fun refreshPlaces() {
         val locations = repo.loadLocations()
         adapter.submitList(locations)
         val empty = locations.isEmpty()
         binding.emptyState.visibility = if (empty) View.VISIBLE else View.GONE
         binding.recyclerLocations.visibility = if (empty) View.GONE else View.VISIBLE
+        bindSummary(locations)
+    }
+
+    private fun bindSummary(locations: List<ScanLocation>) {
+        if (locations.isEmpty()) {
+            binding.cardScanSummary.visibility = View.GONE
+            return
+        }
+        binding.cardScanSummary.visibility = View.VISIBLE
+        val calibrated = locations.count { it.baselineFeatures.isNotEmpty() }
+        binding.textScanSummary.text = if (locations.size == 1) {
+            getString(R.string.scan_summary_one, calibrated)
+        } else {
+            getString(R.string.scan_summary_places, locations.size, calibrated)
+        }
+        val last = locations
+            .mapNotNull { loc -> loc.scanHistory.maxByOrNull { it.timestamp }?.let { loc to it } }
+            .maxByOrNull { it.second.timestamp }
+        binding.textScanLast.text = if (last == null) {
+            getString(R.string.scan_no_observations)
+        } else {
+            getString(
+                R.string.scan_last_observation,
+                last.first.label,
+                relativeTime(last.second.timestamp)
+            )
+        }
     }
 
     private fun showNewLocationDialog() {
@@ -65,15 +97,22 @@ class MainActivity : AppCompatActivity() {
         val inputLayout = TextInputLayout(this).apply {
             hint = "Location name"
             boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            setBoxStrokeColorStateList(
+                ContextCompat.getColorStateList(this@MainActivity, R.color.cyan)!!
+            )
+            setHintTextColor(ContextCompat.getColorStateList(this@MainActivity, R.color.warm_muted))
             setPadding(pad, pad / 2, pad, 0)
         }
         val input = TextInputEditText(inputLayout.context).apply {
             setHint("Kitchen wall — left of sink")
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.warm_white))
+            setHintTextColor(ContextCompat.getColor(this@MainActivity, R.color.warm_faint))
         }
         inputLayout.addView(input)
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("New scan location")
+            .setMessage("Name the wall, pipe, or corner you will hold the phone against.")
             .setView(inputLayout)
             .setPositiveButton("Create & scan") { _, _ ->
                 val label = input.text?.toString()?.trim().orEmpty()
@@ -90,10 +129,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun confirmDelete(location: ScanLocation) {
-        AlertDialog.Builder(this)
-            .setTitle("Delete location?")
-            .setMessage("Remove \"${location.label}\" and all its baselines and scan history?")
-            .setPositiveButton("Delete") { _, _ ->
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Remove this place?")
+            .setMessage("Remove \"${location.label}\" and all of its baselines and scan history?")
+            .setPositiveButton("Remove") { _, _ ->
                 repo.deleteLocation(location.id)
                 onResume()
             }

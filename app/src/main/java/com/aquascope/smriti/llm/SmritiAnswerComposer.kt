@@ -1,30 +1,37 @@
 package com.aquascope.smriti.llm
 
 import com.aquascope.smriti.model.EvidenceState
+import com.aquascope.smriti.model.QueryIntent
 import com.aquascope.smriti.model.SmritiAnswer
 
 /**
- * Rules are the source of truth. Local LLM only rephrases grounded text.
+ * Rules are the source of truth. Local LLM rephrases or answers free-form from grounded facts.
  */
 class SmritiAnswerComposer(
     private val llm: LocalLlmEngine?,
     private val prefs: LocalLlmPreferences
 ) {
 
-    fun compose(question: String, ruleAnswer: SmritiAnswer): SmritiAnswer {
+    fun compose(
+        question: String,
+        ruleAnswer: SmritiAnswer,
+        intent: QueryIntent = QueryIntent.GENERAL
+    ): SmritiAnswer {
         if (!prefs.enabled || llm == null || !llm.isReady) {
             return ruleAnswer.copy(usedLocalModel = false, modelName = null)
         }
 
-        val prompt = GroundedPromptBuilder.build(
-            question = question,
-            ruleAnswer = ruleAnswer,
-            events = ruleAnswer.relatedEvents
-        )
-        val polished = llm.generate(prompt) ?: return ruleAnswer.copy(
-            usedLocalModel = false,
-            modelName = null
-        )
+        val prompt = if (intent == QueryIntent.GENERAL) {
+            GroundedPromptBuilder.buildChat(question, ruleAnswer, ruleAnswer.relatedEvents)
+        } else {
+            GroundedPromptBuilder.build(question, ruleAnswer, ruleAnswer.relatedEvents)
+        }
+
+        val polished = try {
+            llm.generate(prompt)
+        } catch (t: Throwable) {
+            null
+        } ?: return ruleAnswer.copy(usedLocalModel = false, modelName = null)
 
         if (!passesGroundingCheck(polished, ruleAnswer)) {
             return ruleAnswer.copy(usedLocalModel = false, modelName = null)
@@ -47,17 +54,15 @@ class SmritiAnswerComposer(
             if (t.isBlank()) return false
             val rule = ruleAnswer.text.lowercase()
 
-            val modelClaimsConfirmedLeak =
-                positiveLeakClaim(t)
-
+            val modelClaimsConfirmedLeak = positiveLeakClaim(t)
             val rulesAllowConfirmed =
                 ruleAnswer.evidenceState == EvidenceState.CONFIRMED ||
                     positiveLeakClaim(rule)
 
             if (modelClaimsConfirmedLeak && !rulesAllowConfirmed) return false
 
-            // Reject huge expansions that look like free-form chat
-            if (modelText.length > ruleAnswer.text.length * 4 + 200) return false
+            // Reject huge expansions that look like free-form hallucination
+            if (modelText.length > ruleAnswer.text.length * 5 + 280) return false
 
             return true
         }
@@ -69,7 +74,6 @@ class SmritiAnswerComposer(
                 return false
             }
             if (t.contains("unconfirmed") || t.contains("not confirmed") || t.contains("not a confirmed")) {
-                // Still allow other affirmative phrases elsewhere, but strip obvious negations:
                 val stripped = t
                     .replace("not a confirmed leak", " ")
                     .replace("not confirmed", " ")

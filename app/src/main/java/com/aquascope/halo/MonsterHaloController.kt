@@ -43,6 +43,7 @@ class VivoMonsterHaloDriver(
             }
             // hasLight() can be false on iQOO 15 even when the service works — still try.
             val json = HaloEffectJson.forState(state, brightnessPct)
+            if (handleId > 0) client.stopById(handleId)
             val id = client.startLightJson(packageName, json)
             handleId = id
             id > 0
@@ -56,6 +57,7 @@ class VivoMonsterHaloDriver(
         if (!hardwareReachable) return false
         return try {
             armBreathing()
+            if (handleId > 0) client.stopById(handleId)
             val id = client.startLightJson(packageName, json)
             handleId = id
             id > 0
@@ -163,7 +165,7 @@ class MonsterHaloController private constructor(context: Context) {
             context?.let { vivo.tryEnableToggle(it) }
             vivo.reprobe()
             val ok = if (prefs.enabled && !prefs.nightMode && vivo.hardwareReachable) {
-                vivo.playRaw(HaloEffectJson.testSolid(HaloPalette.CYAN, 100))
+                vivo.playRaw(HaloEffectJson.testSolid(HaloPalette.CYAN_HW, 100))
             } else false
             lastHardwareOk = ok
             lastStatus = if (ok) {

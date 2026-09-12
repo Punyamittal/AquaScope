@@ -6,7 +6,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -20,7 +19,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-class MemoryTimelineActivity : AppCompatActivity() {
+class MemoryTimelineActivity : SmritiScreenActivity() {
 
     private lateinit var binding: ActivityMemoryTimelineBinding
     private var range = RANGE_TODAY

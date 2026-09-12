@@ -18,8 +18,8 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Simultaneous chirp playback + recording, tuned for **iQOO 15** (Snapdragon 8 Elite Gen 5,
- * dual stereo speakers). Keeps AEC/NS/AGC disabled for the full capture window.
+ * Simultaneous chirp playback + recording, locked to the **iQOO 15 bottom
+ * speaker and bottom mic**. Top/earpiece speaker and extra mics are excluded.
  */
 class AudioEngine(
     private val context: Context,
@@ -44,7 +44,8 @@ class AudioEngine(
             sampleRate = sampleRate,
             durationSec = chirpDurationSec
         )
-        val chirpShorts = ChirpGenerator.toShortArray(chirp)
+        val chirpMono = ChirpGenerator.toShortArray(chirp)
+        val chirpShorts = IqooAudioRouting.monoToBottomSpeakerStereo(chirpMono)
 
         val minRecordBuf = AudioRecord.getMinBufferSize(
             sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
@@ -64,8 +65,9 @@ class AudioEngine(
         var focusRequest: AudioFocusRequest? = null
 
         try {
-            // iQOO / OriginOS: force media path through loudspeakers at full stream volume
+            // Bottom loudspeaker + bottom mic only — never earpiece / top array
             audioManager.mode = AudioManager.MODE_NORMAL
+            IqooAudioRouting.clearEarpieceRoute(audioManager)
             @Suppress("DEPRECATION")
             audioManager.isSpeakerphoneOn = true
             audioManager.setStreamVolume(
@@ -79,20 +81,24 @@ class AudioEngine(
             heldEffects += holdEffectsDisabled(recorder.audioSessionId)
 
             player = createPlayer(sampleRate)
+            routeBottomHardware(audioManager, player, recorder)
             try {
                 player.setVolume(1.0f)
             } catch (_: Exception) {
             }
+            IqooAudioRouting.muteTopSpeaker(player)
 
             val recordedShorts = ShortArray(totalRecordSamples)
             var totalRead = 0
-            val writeChunk = IqooDeviceProfile.PLAY_WRITE_CHUNK
+            val writeChunk = (IqooDeviceProfile.PLAY_WRITE_CHUNK * 2).let { it - it % 2 }
 
             val playThread = Thread({
                 try {
                     var offset = 0
                     while (offset < chirpShorts.size && playbackError.get() == null) {
-                        val chunk = minOf(writeChunk, chirpShorts.size - offset)
+                        var chunk = minOf(writeChunk, chirpShorts.size - offset)
+                        if (chunk % 2 != 0) chunk -= 1
+                        if (chunk <= 0) break
                         val written = player.write(chirpShorts, offset, chunk)
                         if (written < 0) {
                             throw IllegalStateException("AudioTrack write failed (code $written)")
@@ -218,7 +224,7 @@ class AudioEngine(
     private fun pickSampleRate(): Int {
         for (rate in IqooDeviceProfile.SAMPLE_RATE_CANDIDATES) {
             val playOk = AudioTrack.getMinBufferSize(
-                rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+                rate, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT
             )
             val recOk = AudioRecord.getMinBufferSize(
                 rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
@@ -230,10 +236,10 @@ class AudioEngine(
 
     private fun createPlayer(sampleRate: Int): AudioTrack {
         val minBuf = AudioTrack.getMinBufferSize(
-            sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            sampleRate, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT
         )
         require(minBuf > 0) { "Playback not supported at $sampleRate Hz" }
-        val streamBuf = maxOf(minBuf * 4, 8192 * 2)
+        val streamBuf = maxOf(minBuf * 4, 8192 * 4)
 
         val attempts = listOf(
             {
@@ -248,7 +254,7 @@ class AudioEngine(
                         AudioFormat.Builder()
                             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                             .setSampleRate(sampleRate)
-                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
                             .build()
                     )
                     .setBufferSizeInBytes(streamBuf)
@@ -268,7 +274,7 @@ class AudioEngine(
                         AudioFormat.Builder()
                             .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                             .setSampleRate(sampleRate)
-                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
                             .build()
                     )
                     .setBufferSizeInBytes(streamBuf)
@@ -280,7 +286,7 @@ class AudioEngine(
                 AudioTrack(
                     AudioManager.STREAM_MUSIC,
                     sampleRate,
-                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.CHANNEL_OUT_STEREO,
                     AudioFormat.ENCODING_PCM_16BIT,
                     streamBuf,
                     AudioTrack.MODE_STREAM
@@ -301,17 +307,32 @@ class AudioEngine(
         throw IllegalStateException("AudioTrack failed to initialize", lastError)
     }
 
+    private fun routeBottomHardware(
+        audioManager: AudioManager,
+        player: AudioTrack,
+        recorder: AudioRecord
+    ) {
+        val speaker = IqooAudioRouting.pickBottomSpeaker(audioManager)
+        val mic = IqooAudioRouting.pickBottomMic(audioManager)
+        IqooAudioRouting.pinPlayer(player, speaker)
+        IqooAudioRouting.pinRecorder(recorder, mic)
+    }
+
     private fun createRecorder(sampleRate: Int, recordBufSize: Int): AudioRecord {
         var lastError: Exception? = null
         for (source in preferredAudioSources()) {
             try {
-                val recorder = AudioRecord(
-                    source,
-                    sampleRate,
-                    AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT,
-                    recordBufSize
-                )
+                val recorder = AudioRecord.Builder()
+                    .setAudioSource(source)
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .setSampleRate(sampleRate)
+                            .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+                            .build()
+                    )
+                    .setBufferSizeInBytes(recordBufSize)
+                    .build()
                 if (recorder.state == AudioRecord.STATE_INITIALIZED) return recorder
                 recorder.release()
             } catch (e: Exception) {
@@ -321,10 +342,10 @@ class AudioEngine(
         throw IllegalStateException("Could not initialize microphone capture", lastError)
     }
 
+    /** Primary / unprocessed sources map to the bottom mic; skip camcorder and voice arrays. */
     private fun preferredAudioSources(): List<Int> = listOf(
         MediaRecorder.AudioSource.UNPROCESSED,
         MediaRecorder.AudioSource.MIC,
-        MediaRecorder.AudioSource.VOICE_RECOGNITION,
         MediaRecorder.AudioSource.DEFAULT
     )
 

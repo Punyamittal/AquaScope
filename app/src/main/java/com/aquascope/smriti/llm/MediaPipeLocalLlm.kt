@@ -25,15 +25,19 @@ class MediaPipeLocalLlm(
 
     fun warmUp(): Boolean {
         if (inference.get() != null) return true
+        // Trim prompt budget on large models (e.g. Qwen 1.5B) to reduce OOM risk.
+        val maxTokens = if (modelFile.length() > 900_000_000L) 256 else 384
         return try {
+            System.gc()
             val options = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile.absolutePath)
-                .setMaxTokens(512)
+                .setMaxTokens(maxTokens)
                 .setMaxTopK(40)
                 .build()
             val engine = LlmInference.createFromOptions(context, options)
             inference.set(engine)
             loadError = null
+            Log.i(TAG, "Local LLM ready: ${modelFile.name} maxTokens=$maxTokens")
             true
         } catch (t: Throwable) {
             loadError = t.message ?: t.javaClass.simpleName
@@ -48,7 +52,9 @@ class MediaPipeLocalLlm(
     override fun generate(prompt: String): String? {
         val engine = inference.get() ?: return null
         return try {
-            engine.generateResponse(prompt)?.trim()?.takeIf { it.isNotEmpty() }
+            // Cap input size — huge prompts + Qwen can native-OOM the process.
+            val clipped = if (prompt.length > 3500) prompt.take(3500) else prompt
+            engine.generateResponse(clipped)?.trim()?.takeIf { it.isNotEmpty() }
         } catch (t: Throwable) {
             Log.w(TAG, "Local LLM generate failed", t)
             null

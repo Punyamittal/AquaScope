@@ -17,16 +17,28 @@ class WaveformStripView @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 5.2f * resources.displayMetrics.density
+        strokeCap = Paint.Cap.ROUND
+    }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 1.6f * resources.displayMetrics.density
+        strokeWidth = 2.2f * resources.displayMetrics.density
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val corePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.1f * resources.displayMetrics.density
         strokeCap = Paint.Cap.ROUND
     }
     private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
 
-    private val cyan = ContextCompat.getColor(context, R.color.cyan)
+    private val cyanBright = ContextCompat.getColor(context, R.color.cyan_bright)
+    private val cyanBloom = ContextCompat.getColor(context, R.color.cyan_bloom)
+    private val paper = ContextCompat.getColor(context, R.color.paper_mist)
     private val faint = ContextCompat.getColor(context, R.color.hairline_dark)
 
     private var samples: FloatArray = FloatArray(0)
@@ -60,22 +72,32 @@ class WaveformStripView @JvmOverloads constructor(
             val n = samples.size
             val gap = 2f * resources.displayMetrics.density
             val bw = max(2f, (w - gap * (n - 1)) / n)
-            barPaint.color = cyan
+            barPaint.color = cyanBright
+            barPaint.alpha = 235
             samples.forEachIndexed { i, v ->
                 val bh = (v.coerceIn(0f, 1f) * (h * 0.92f))
                 val x = i * (bw + gap)
                 canvas.drawRoundRect(x, h - bh, x + bw, h, 3f, 3f, barPaint)
             }
         } else {
-            paint.color = cyan
             val mid = h / 2f
             val n = samples.size
             var prevX = 0f
             var prevY = mid
+            glowPaint.color = cyanBloom
+            glowPaint.alpha = 90
+            paint.color = cyanBright
+            paint.alpha = 230
+            corePaint.color = paper
+            corePaint.alpha = 180
             samples.forEachIndexed { i, v ->
                 val x = if (n == 1) 0f else i * w / (n - 1)
                 val y = mid - v.coerceIn(-1f, 1f) * (h * 0.42f)
-                if (i > 0) canvas.drawLine(prevX, prevY, x, y, paint)
+                if (i > 0) {
+                    canvas.drawLine(prevX, prevY, x, y, glowPaint)
+                    canvas.drawLine(prevX, prevY, x, y, paint)
+                    canvas.drawLine(prevX, prevY, x, y, corePaint)
+                }
                 prevX = x
                 prevY = y
             }

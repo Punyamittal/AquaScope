@@ -11,30 +11,44 @@ import android.view.animation.LinearInterpolator
 import androidx.core.content.ContextCompat
 import com.aquascope.R
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Organic acoustic field for AquaScope scanning.
- * Live amplitude and spectrum come from real capture — never invented.
+ * Scan field: stacked bright wave layers on concentric rings.
+ * Live amplitude / spectrum come from real capture — never invented.
  */
 class AcousticFieldView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
-    private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val dens = resources.displayMetrics.density
+
+    private val baseRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 1.6f * resources.displayMetrics.density
+        strokeWidth = 1.6f * dens
+    }
+    private val wavePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+    }
+    private val hashPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.4f * dens
+        strokeCap = Paint.Cap.ROUND
     }
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val path = Path()
+    private val wavePath = Path()
+    private val harmonicPath = Path()
 
-    private val navy = ContextCompat.getColor(context, R.color.navy_deep)
     private val cyan = ContextCompat.getColor(context, R.color.cyan)
-    private val ocean = ContextCompat.getColor(context, R.color.ocean)
+    private val cyanBright = ContextCompat.getColor(context, R.color.cyan_bright)
+    private val cyanBloom = ContextCompat.getColor(context, R.color.cyan_bloom)
     private val amber = ContextCompat.getColor(context, R.color.amber)
-    private val warm = ContextCompat.getColor(context, R.color.warm_white)
+    private val paper = ContextCompat.getColor(context, R.color.paper_mist)
 
     private var scanning = false
     private var liveAmp = 0f
@@ -46,6 +60,7 @@ class AcousticFieldView @JvmOverloads constructor(
     fun setScanning(value: Boolean) {
         scanning = value
         if (!value) liveAmp = 0f
+        animator?.duration = if (value) 2800L else 5200L
         invalidate()
     }
 
@@ -72,7 +87,7 @@ class AcousticFieldView @JvmOverloads constructor(
         super.onAttachedToWindow()
         if (animator == null) {
             animator = ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 8000
+                duration = 5200L
                 repeatCount = ValueAnimator.INFINITE
                 interpolator = LinearInterpolator()
                 addUpdateListener {
@@ -93,57 +108,146 @@ class AcousticFieldView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         val cx = width / 2f
         val cy = height / 2f
-        val maxR = min(cx, cy) * 0.92f
-        canvas.drawColor(navy)
+        val maxR = min(cx, cy) * 0.94f
+        val hot = if (highlightAmber) amber else cyanBloom
+        val mid = if (highlightAmber) amber else cyanBright
+        val cool = if (highlightAmber) amber else cyan
 
-        fillPaint.color = cyan
-        fillPaint.alpha = 28
-        canvas.drawCircle(cx, cy, maxR * (0.18f + liveAmp * 0.08f), fillPaint)
-        fillPaint.alpha = 210
-        fillPaint.color = if (highlightAmber) amber else cyan
+        fillPaint.color = hot
+        fillPaint.alpha = (36 + liveAmp * 40).toInt().coerceIn(28, 90)
+        canvas.drawCircle(cx, cy, maxR * (0.20f + liveAmp * 0.08f), fillPaint)
+        fillPaint.color = mid
+        fillPaint.alpha = (70 + liveAmp * 50).toInt().coerceIn(50, 140)
+        canvas.drawCircle(cx, cy, maxR * 0.10f, fillPaint)
+        fillPaint.color = hot
+        fillPaint.alpha = 255
         canvas.drawCircle(cx, cy, maxR * 0.045f, fillPaint)
 
-        val rings = 8
+        val rings = 5
         for (i in 0 until rings) {
             val t = (i + 1f) / (rings + 1f)
-            val warp = 0.028f + if (scanning) liveAmp * 0.07f else 0.018f
-            ringPaint.color = if (highlightAmber && i == rings - 1) amber else if (i % 2 == 0) cyan else ocean
-            ringPaint.alpha = (36 + (1f - t) * 88).toInt()
-            path.reset()
-            val steps = 64
-            var prevX = 0f
-            var prevY = 0f
-            var prev2X = 0f
-            var prev2Y = 0f
-            fun point(s: Int): Pair<Float, Float> {
-                val a = (s / steps.toFloat()) * 2.0 * PI + phase * 2.0 * PI * 0.12
-                val spec = if (spectrum.isNotEmpty()) {
-                    spectrum[(s * spectrum.size / steps).coerceIn(0, spectrum.lastIndex)]
-                } else 0f
-                val extra = if (scanning) liveAmp * 0.10f else spec * 0.18f
-                val r = maxR * (0.20f + t * 0.74f) * (1f + warp * sin(a * 2 + i * 0.4).toFloat() + extra)
-                return (cx + (r * kotlin.math.cos(a)).toFloat()) to (cy + (r * kotlin.math.sin(a)).toFloat())
+            val baseR = maxR * (0.20f + t * 0.74f)
+            val ringCore = when {
+                highlightAmber && i >= rings - 2 -> amber
+                i % 2 == 0 -> cyanBright
+                else -> cyan
             }
-            val first = point(0)
-            path.moveTo(first.first, first.second)
-            prev2X = first.first
-            prev2Y = first.second
-            prevX = first.first
-            prevY = first.second
-            for (s in 1..steps) {
-                val (x, y) = point(s)
-                val c1x = prevX + (x - prev2X) / 6f
-                val c1y = prevY + (y - prev2Y) / 6f
-                val c2x = x - (x - prevX) / 6f
-                val c2y = y - (y - prevY) / 6f
-                path.cubicTo(c1x, c1y, c2x, c2y, x, y)
-                prev2X = prevX
-                prev2Y = prevY
-                prevX = x
-                prevY = y
+            val ringGlow = when {
+                highlightAmber && i >= rings - 2 -> amber
+                i % 2 == 0 -> cyanBloom
+                else -> cyanBright
             }
-            path.close()
-            canvas.drawPath(path, ringPaint)
+
+            baseRingPaint.color = ringCore
+            baseRingPaint.alpha = (70 + (1f - t) * 90 + liveAmp * 40).toInt().coerceIn(60, 200)
+            canvas.drawCircle(cx, cy, baseR, baseRingPaint)
+
+            drawHashLayer(canvas, cx, cy, baseR, t, i, ringGlow)
+            buildWave(wavePath, cx, cy, baseR, t, i, lobes = 5 + i, invert = false)
+            buildWave(harmonicPath, cx, cy, baseR, t, i, lobes = 8 + i, invert = true)
+            drawBrightLayer(canvas, harmonicPath, t, cool, glow = true)
+            drawBrightLayer(canvas, wavePath, t, ringGlow, glow = true)
+            drawBrightLayer(canvas, wavePath, t, ringCore, glow = false)
         }
+    }
+
+    private fun drawHashLayer(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        baseR: Float,
+        t: Float,
+        ringIndex: Int,
+        color: Int
+    ) {
+        val tickCount = 36 + ringIndex * 8
+        val tickLen = (4.2f + (1f - t) * 6f + liveAmp * 5f) * dens
+        val spin = phase * 2.0 * PI * (if (ringIndex % 2 == 0) 0.42 else -0.34)
+        hashPaint.color = color
+        hashPaint.alpha = (90 + (1f - t) * 90 + liveAmp * 50).toInt().coerceIn(70, 230)
+
+        for (k in 0 until tickCount) {
+            if ((k + ringIndex) % 2 == 0) continue
+            val a = (k / tickCount.toFloat()) * 2.0 * PI + spin
+            val ca = cos(a).toFloat()
+            val sa = sin(a).toFloat()
+            val r0 = baseR - tickLen * 0.5f
+            val r1 = baseR + tickLen * 0.5f
+            canvas.drawLine(
+                cx + ca * r0,
+                cy + sa * r0,
+                cx + ca * r1,
+                cy + sa * r1,
+                hashPaint
+            )
+        }
+    }
+
+    private fun buildWave(
+        path: Path,
+        cx: Float,
+        cy: Float,
+        baseR: Float,
+        t: Float,
+        ringIndex: Int,
+        lobes: Int,
+        invert: Boolean
+    ) {
+        val steps = 120
+        val amp = baseR * (
+            0.026f + (1f - t) * 0.012f +
+                if (scanning) liveAmp * 0.10f else 0.034f + spectrumEnergy() * 0.08f
+            )
+        val dir = if (invert xor (ringIndex % 2 == 0)) 1.0 else -1.0
+        val travel = phase * 2.0 * PI * (1.05 + ringIndex * 0.18) * dir
+        path.reset()
+        for (s in 0..steps) {
+            val u = s / steps.toFloat()
+            val a = u * 2.0 * PI
+            val spec = spectrumSample(u)
+            val wobble = sin(a * lobes + travel).toFloat() * amp * (1f + spec * 0.9f)
+            val r = baseR + wobble
+            val x = cx + (r * cos(a)).toFloat()
+            val y = cy + (r * sin(a)).toFloat()
+            if (s == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+    }
+
+    private fun drawBrightLayer(
+        canvas: Canvas,
+        path: Path,
+        t: Float,
+        color: Int,
+        glow: Boolean
+    ) {
+        wavePaint.color = color
+        if (glow) {
+            wavePaint.alpha = (55 + (1f - t) * 70 + liveAmp * 50).toInt().coerceIn(50, 160)
+            wavePaint.strokeWidth = (7.5f + (1f - t) * 3.5f + liveAmp * 2.4f) * dens
+        } else {
+            wavePaint.alpha = (190 + (1f - t) * 50 + liveAmp * 15).toInt().coerceIn(180, 255)
+            wavePaint.strokeWidth = (2.2f + (1f - t) * 1.4f + liveAmp * 1.6f) * dens
+        }
+        canvas.drawPath(path, wavePaint)
+        if (!glow) {
+            wavePaint.color = paper
+            wavePaint.alpha = (90 + liveAmp * 40).toInt().coerceIn(70, 160)
+            wavePaint.strokeWidth = (0.9f + liveAmp * 0.6f) * dens
+            canvas.drawPath(path, wavePaint)
+        }
+    }
+
+    private fun spectrumSample(u: Float): Float {
+        if (spectrum.isEmpty()) return 0f
+        val idx = (u * spectrum.size).toInt().coerceIn(0, spectrum.lastIndex)
+        return spectrum[idx].coerceIn(0f, 1f)
+    }
+
+    private fun spectrumEnergy(): Float {
+        if (spectrum.isEmpty()) return 0f
+        var s = 0f
+        for (v in spectrum) s += v
+        return (s / spectrum.size).coerceIn(0f, 1f)
     }
 }

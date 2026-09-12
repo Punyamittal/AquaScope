@@ -15,3 +15,11 @@ dependencyResolutionManagement {
 
 rootProject.name = "AquaScope"
 include(":app")
+include(":smriti-app")
+include(":core-database")
+include(":core-hardware")
+include(":core-telemetry")
+include(":feature-capture")
+include(":feature-gaming")
+include(":feature-guardian")
+include(":feature-memory")

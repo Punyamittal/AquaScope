@@ -38,6 +38,33 @@
                 android:textColor="@color/warm_muted"
                 android:textSize="13sp" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.16"
+                android:text="@string/neural_core_section"
+                android:textColor="@color/cyan"
+                android:textSize="12sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:lineSpacingMultiplier="1.25"
+                android:text="@string/neural_core_blurb"
+                android:textColor="@color/warm_muted"
+                android:textSize="13sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOpenNeuralCore"
+                style="@style/Widget.AquaScope.Button.Ghost"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/neural_core" />
+
             <!-- SMRITI Light / Monster Halo -->
             <TextView
                 android:layout_width="match_parent"

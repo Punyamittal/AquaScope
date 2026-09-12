@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.18)
+project(smriti_killfeed)
+add_library(smriti_killfeed SHARED killfeed.cpp)
+find_library(log-lib log)
+target_link_libraries(smriti_killfeed ${log-lib})
