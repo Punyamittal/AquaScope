@@ -70,7 +70,7 @@
 35-->[androidx.core:core:1.12.0] C:\Users\punya mittal\.gradle\caches\transforms-3\d87f9e9bae596eae336de9ebdd8c363e\transformed\core-1.12.0\AndroidManifest.xml:26:22-94
 36
 37    <application
-37-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:19:5-77:19
+37-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:19:5-79:19
 38        android:name="com.aquascope.AquaScopeApp"
 38-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:26:9-37
 39        android:allowBackup="true"
@@ -168,210 +168,214 @@
 83            android:exported="false" />
 83-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:63:13-37
 84        <service
-84-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:64:9-67:63
+84-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:64:9-68:44
 85            android:name="com.aquascope.smriti.brain.CaptureProjectionService"
 85-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:65:13-66
 86            android:exported="false"
 86-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:66:13-37
-87            android:foregroundServiceType="mediaProjection" />
+87            android:foregroundServiceType="mediaProjection"
 87-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:67:13-60
-88        <service
-88-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:68:9-71:58
-89            android:name="com.aquascope.smriti.brain.GuardianService"
-89-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:69:13-57
-90            android:exported="false"
-90-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:70:13-37
-91            android:foregroundServiceType="microphone" />
-91-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:71:13-55
-92        <service
-92-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:72:9-75:45
-93            android:name="com.aquascope.smriti.llm.LlmSandboxService"
-93-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:73:13-57
-94            android:exported="false"
-94-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:74:13-37
-95            android:process=":smriti_llm" />
-95-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:75:13-42
-96        <service
-96-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:9:9-15:19
-97            android:name="com.google.mlkit.common.internal.MlKitComponentDiscoveryService"
-97-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:10:13-91
-98            android:directBootAware="true"
-98-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:17:13-43
-99            android:exported="false" >
-99-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:11:13-37
-100            <meta-data
-100-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:12:13-14:85
-101                android:name="com.google.firebase.components:com.google.mlkit.vision.text.internal.TextRegistrar"
-101-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:13:17-114
-102                android:value="com.google.firebase.components.ComponentRegistrar" />
-102-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:14:17-82
-103            <meta-data
-103-->[com.google.mlkit:vision-common:17.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\b49ba7490f432d946aad3e3e8029b928\transformed\vision-common-17.3.0\AndroidManifest.xml:12:13-14:85
-104                android:name="com.google.firebase.components:com.google.mlkit.vision.common.internal.VisionCommonRegistrar"
-104-->[com.google.mlkit:vision-common:17.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\b49ba7490f432d946aad3e3e8029b928\transformed\vision-common-17.3.0\AndroidManifest.xml:13:17-124
-105                android:value="com.google.firebase.components.ComponentRegistrar" />
-105-->[com.google.mlkit:vision-common:17.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\b49ba7490f432d946aad3e3e8029b928\transformed\vision-common-17.3.0\AndroidManifest.xml:14:17-82
-106            <meta-data
-106-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:20:13-22:85
-107                android:name="com.google.firebase.components:com.google.mlkit.common.internal.CommonComponentRegistrar"
-107-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:21:17-120
-108                android:value="com.google.firebase.components.ComponentRegistrar" />
-108-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:22:17-82
-109        </service>
-110
-111        <provider
-111-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:9:9-13:38
-112            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
-112-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:10:13-78
-113            android:authorities="com.aquascope.mlkitinitprovider"
-113-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:11:13-69
-114            android:exported="false"
-114-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:12:13-37
-115            android:initOrder="99" />
-115-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:13:13-35
-116
-117        <activity
-117-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3463477cb860b2337f278582e45930f4\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:9-173
-118            android:name="com.google.android.gms.common.api.GoogleApiActivity"
-118-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3463477cb860b2337f278582e45930f4\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:19-85
-119            android:exported="false"
-119-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3463477cb860b2337f278582e45930f4\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:146-170
-120            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-120-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3463477cb860b2337f278582e45930f4\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:86-145
-121
-122        <meta-data
-122-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0a46583de195ec982d4e35eae2b6011b\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:9-122
-123            android:name="com.google.android.gms.version"
-123-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0a46583de195ec982d4e35eae2b6011b\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:20-65
-124            android:value="@integer/google_play_services_version" />
-124-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0a46583de195ec982d4e35eae2b6011b\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:66-119
-125
-126        <provider
-126-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:24:9-32:20
-127            android:name="androidx.startup.InitializationProvider"
-127-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:25:13-67
-128            android:authorities="com.aquascope.androidx-startup"
-128-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:26:13-68
-129            android:exported="false" >
-129-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:27:13-37
-130            <meta-data
-130-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
-131                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-131-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
-132                android:value="androidx.startup" />
-132-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
-133            <meta-data
-133-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\punya mittal\.gradle\caches\transforms-3\a4b3654ea4449ecee7eb1b4c5ac67844\transformed\lifecycle-process-2.7.0\AndroidManifest.xml:29:13-31:52
-134                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-134-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\punya mittal\.gradle\caches\transforms-3\a4b3654ea4449ecee7eb1b4c5ac67844\transformed\lifecycle-process-2.7.0\AndroidManifest.xml:30:17-78
-135                android:value="androidx.startup" />
-135-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\punya mittal\.gradle\caches\transforms-3\a4b3654ea4449ecee7eb1b4c5ac67844\transformed\lifecycle-process-2.7.0\AndroidManifest.xml:31:17-49
-136            <meta-data
-136-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:29:13-31:52
-137                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-137-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:30:17-85
-138                android:value="androidx.startup" />
-138-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:31:17-49
-139        </provider>
-140
-141        <service
-141-->[androidx.room:room-runtime:2.6.1] C:\Users\punya mittal\.gradle\caches\transforms-3\35c4bfe3e1cacef8ed93be086c0f02b2\transformed\room-runtime-2.6.1\AndroidManifest.xml:24:9-28:63
-142            android:name="androidx.room.MultiInstanceInvalidationService"
-142-->[androidx.room:room-runtime:2.6.1] C:\Users\punya mittal\.gradle\caches\transforms-3\35c4bfe3e1cacef8ed93be086c0f02b2\transformed\room-runtime-2.6.1\AndroidManifest.xml:25:13-74
-143            android:directBootAware="true"
-143-->[androidx.room:room-runtime:2.6.1] C:\Users\punya mittal\.gradle\caches\transforms-3\35c4bfe3e1cacef8ed93be086c0f02b2\transformed\room-runtime-2.6.1\AndroidManifest.xml:26:13-43
-144            android:exported="false" />
-144-->[androidx.room:room-runtime:2.6.1] C:\Users\punya mittal\.gradle\caches\transforms-3\35c4bfe3e1cacef8ed93be086c0f02b2\transformed\room-runtime-2.6.1\AndroidManifest.xml:27:13-37
-145        <!--
-146             Applications that target Android S+ require explicit declaration of
-147             any referenced vendor-provided libraries.
-148        -->
-149        <uses-native-library
-149-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:28:9-30:40
-150            android:name="libOpenCL.so"
-150-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:29:13-40
-151            android:required="false" />
-151-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:30:13-37
-152        <uses-native-library
-152-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:28:9-30:40
-153            android:name="libOpenCL-car.so"
-153-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:29:13-40
-154            android:required="false" />
-154-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:30:13-37
-155        <uses-native-library
-155-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:28:9-30:40
-156            android:name="libOpenCL-pixel.so"
-156-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:29:13-40
-157            android:required="false" />
-157-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:30:13-37
-158
-159        <receiver
-159-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:34:9-52:20
-160            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-160-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:35:13-76
-161            android:directBootAware="false"
-161-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:36:13-44
-162            android:enabled="true"
-162-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:37:13-35
-163            android:exported="true"
-163-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:38:13-36
-164            android:permission="android.permission.DUMP" >
-164-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:39:13-57
-165            <intent-filter>
-165-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:40:13-42:29
-166                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-166-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:17-91
-166-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:25-88
-167            </intent-filter>
-168            <intent-filter>
-168-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:43:13-45:29
-169                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-169-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:17-85
-169-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:25-82
-170            </intent-filter>
-171            <intent-filter>
-171-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:46:13-48:29
-172                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-172-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:17-88
-172-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:25-85
-173            </intent-filter>
-174            <intent-filter>
-174-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:49:13-51:29
-175                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-175-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:17-95
-175-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:25-92
-176            </intent-filter>
-177        </receiver>
-178
-179        <service
-179-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:29:9-35:19
-180            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
-180-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:30:13-103
-181            android:exported="false" >
-181-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:31:13-37
-182            <meta-data
-182-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:32:13-34:39
-183                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
-183-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:33:17-94
-184                android:value="cct" />
-184-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:34:17-36
-185        </service>
-186        <service
-186-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:26:9-30:19
-187            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
-187-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:27:13-117
-188            android:exported="false"
-188-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:28:13-37
-189            android:permission="android.permission.BIND_JOB_SERVICE" >
-189-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:29:13-69
-190        </service>
-191
-192        <receiver
-192-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:32:9-34:40
-193            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
-193-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:33:13-132
-194            android:exported="false" />
-194-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:34:13-37
-195    </application>
-196
-197</manifest>
+88            android:stopWithTask="false" />
+88-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:68:13-41
+89        <service
+89-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:69:9-73:44
+90            android:name="com.aquascope.smriti.brain.GuardianService"
+90-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:70:13-57
+91            android:exported="false"
+91-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:71:13-37
+92            android:foregroundServiceType="microphone"
+92-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:72:13-55
+93            android:stopWithTask="false" />
+93-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:73:13-41
+94        <service
+94-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:74:9-77:45
+95            android:name="com.aquascope.smriti.llm.LlmSandboxService"
+95-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:75:13-57
+96            android:exported="false"
+96-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:76:13-37
+97            android:process=":smriti_llm" />
+97-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:77:13-42
+98        <service
+98-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:9:9-15:19
+99            android:name="com.google.mlkit.common.internal.MlKitComponentDiscoveryService"
+99-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:10:13-91
+100            android:directBootAware="true"
+100-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:17:13-43
+101            android:exported="false" >
+101-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:11:13-37
+102            <meta-data
+102-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:12:13-14:85
+103                android:name="com.google.firebase.components:com.google.mlkit.vision.text.internal.TextRegistrar"
+103-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:13:17-114
+104                android:value="com.google.firebase.components.ComponentRegistrar" />
+104-->[com.google.android.gms:play-services-mlkit-text-recognition-common:19.1.0] C:\Users\punya mittal\.gradle\caches\transforms-3\5b1ed6646fc205b167f10a4efbc9299e\transformed\play-services-mlkit-text-recognition-common-19.1.0\AndroidManifest.xml:14:17-82
+105            <meta-data
+105-->[com.google.mlkit:vision-common:17.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\b49ba7490f432d946aad3e3e8029b928\transformed\vision-common-17.3.0\AndroidManifest.xml:12:13-14:85
+106                android:name="com.google.firebase.components:com.google.mlkit.vision.common.internal.VisionCommonRegistrar"
+106-->[com.google.mlkit:vision-common:17.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\b49ba7490f432d946aad3e3e8029b928\transformed\vision-common-17.3.0\AndroidManifest.xml:13:17-124
+107                android:value="com.google.firebase.components.ComponentRegistrar" />
+107-->[com.google.mlkit:vision-common:17.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\b49ba7490f432d946aad3e3e8029b928\transformed\vision-common-17.3.0\AndroidManifest.xml:14:17-82
+108            <meta-data
+108-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:20:13-22:85
+109                android:name="com.google.firebase.components:com.google.mlkit.common.internal.CommonComponentRegistrar"
+109-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:21:17-120
+110                android:value="com.google.firebase.components.ComponentRegistrar" />
+110-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:22:17-82
+111        </service>
+112
+113        <provider
+113-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:9:9-13:38
+114            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+114-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:10:13-78
+115            android:authorities="com.aquascope.mlkitinitprovider"
+115-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:11:13-69
+116            android:exported="false"
+116-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:12:13-37
+117            android:initOrder="99" />
+117-->[com.google.mlkit:common:18.11.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0c0874fbff3be0302b615ec599a76f6c\transformed\common-18.11.0\AndroidManifest.xml:13:13-35
+118
+119        <activity
+119-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3463477cb860b2337f278582e45930f4\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:9-173
+120            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+120-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3463477cb860b2337f278582e45930f4\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:19-85
+121            android:exported="false"
+121-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3463477cb860b2337f278582e45930f4\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:146-170
+122            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+122-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\punya mittal\.gradle\caches\transforms-3\3463477cb860b2337f278582e45930f4\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:86-145
+123
+124        <meta-data
+124-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0a46583de195ec982d4e35eae2b6011b\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:9-122
+125            android:name="com.google.android.gms.version"
+125-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0a46583de195ec982d4e35eae2b6011b\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:20-65
+126            android:value="@integer/google_play_services_version" />
+126-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\0a46583de195ec982d4e35eae2b6011b\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:66-119
+127
+128        <provider
+128-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:24:9-32:20
+129            android:name="androidx.startup.InitializationProvider"
+129-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:25:13-67
+130            android:authorities="com.aquascope.androidx-startup"
+130-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:26:13-68
+131            android:exported="false" >
+131-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:27:13-37
+132            <meta-data
+132-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
+133                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+133-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
+134                android:value="androidx.startup" />
+134-->[androidx.emoji2:emoji2:1.4.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cae55290b60804e9f82ea668b9a46fc5\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
+135            <meta-data
+135-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\punya mittal\.gradle\caches\transforms-3\a4b3654ea4449ecee7eb1b4c5ac67844\transformed\lifecycle-process-2.7.0\AndroidManifest.xml:29:13-31:52
+136                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+136-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\punya mittal\.gradle\caches\transforms-3\a4b3654ea4449ecee7eb1b4c5ac67844\transformed\lifecycle-process-2.7.0\AndroidManifest.xml:30:17-78
+137                android:value="androidx.startup" />
+137-->[androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\punya mittal\.gradle\caches\transforms-3\a4b3654ea4449ecee7eb1b4c5ac67844\transformed\lifecycle-process-2.7.0\AndroidManifest.xml:31:17-49
+138            <meta-data
+138-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:29:13-31:52
+139                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+139-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:30:17-85
+140                android:value="androidx.startup" />
+140-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:31:17-49
+141        </provider>
+142
+143        <service
+143-->[androidx.room:room-runtime:2.6.1] C:\Users\punya mittal\.gradle\caches\transforms-3\35c4bfe3e1cacef8ed93be086c0f02b2\transformed\room-runtime-2.6.1\AndroidManifest.xml:24:9-28:63
+144            android:name="androidx.room.MultiInstanceInvalidationService"
+144-->[androidx.room:room-runtime:2.6.1] C:\Users\punya mittal\.gradle\caches\transforms-3\35c4bfe3e1cacef8ed93be086c0f02b2\transformed\room-runtime-2.6.1\AndroidManifest.xml:25:13-74
+145            android:directBootAware="true"
+145-->[androidx.room:room-runtime:2.6.1] C:\Users\punya mittal\.gradle\caches\transforms-3\35c4bfe3e1cacef8ed93be086c0f02b2\transformed\room-runtime-2.6.1\AndroidManifest.xml:26:13-43
+146            android:exported="false" />
+146-->[androidx.room:room-runtime:2.6.1] C:\Users\punya mittal\.gradle\caches\transforms-3\35c4bfe3e1cacef8ed93be086c0f02b2\transformed\room-runtime-2.6.1\AndroidManifest.xml:27:13-37
+147        <!--
+148             Applications that target Android S+ require explicit declaration of
+149             any referenced vendor-provided libraries.
+150        -->
+151        <uses-native-library
+151-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:28:9-30:40
+152            android:name="libOpenCL.so"
+152-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:29:13-40
+153            android:required="false" />
+153-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:30:13-37
+154        <uses-native-library
+154-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:28:9-30:40
+155            android:name="libOpenCL-car.so"
+155-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:29:13-40
+156            android:required="false" />
+156-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:30:13-37
+157        <uses-native-library
+157-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:28:9-30:40
+158            android:name="libOpenCL-pixel.so"
+158-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:29:13-40
+159            android:required="false" />
+159-->C:\Users\punya mittal\aquascope\app\src\main\AndroidManifest.xml:30:13-37
+160
+161        <receiver
+161-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:34:9-52:20
+162            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+162-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:35:13-76
+163            android:directBootAware="false"
+163-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:36:13-44
+164            android:enabled="true"
+164-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:37:13-35
+165            android:exported="true"
+165-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:38:13-36
+166            android:permission="android.permission.DUMP" >
+166-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:39:13-57
+167            <intent-filter>
+167-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:40:13-42:29
+168                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+168-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:17-91
+168-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:25-88
+169            </intent-filter>
+170            <intent-filter>
+170-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:43:13-45:29
+171                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+171-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:17-85
+171-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:25-82
+172            </intent-filter>
+173            <intent-filter>
+173-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:46:13-48:29
+174                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+174-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:17-88
+174-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:25-85
+175            </intent-filter>
+176            <intent-filter>
+176-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:49:13-51:29
+177                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+177-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:17-95
+177-->[androidx.profileinstaller:profileinstaller:1.3.0] C:\Users\punya mittal\.gradle\caches\transforms-3\cfc3ecbc52bfa29aabfc0ce923c70596\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:25-92
+178            </intent-filter>
+179        </receiver>
+180
+181        <service
+181-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:29:9-35:19
+182            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+182-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:30:13-103
+183            android:exported="false" >
+183-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:31:13-37
+184            <meta-data
+184-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:32:13-34:39
+185                android:name="backend:com.google.android.datatransport.cct.CctBackendFactory"
+185-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:33:17-94
+186                android:value="cct" />
+186-->[com.google.android.datatransport:transport-backend-cct:2.3.3] C:\Users\punya mittal\.gradle\caches\transforms-3\d02408f4b1da29a3a4d7dacb2a14b5db\transformed\transport-backend-cct-2.3.3\AndroidManifest.xml:34:17-36
+187        </service>
+188        <service
+188-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:26:9-30:19
+189            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+189-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:27:13-117
+190            android:exported="false"
+190-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:28:13-37
+191            android:permission="android.permission.BIND_JOB_SERVICE" >
+191-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:29:13-69
+192        </service>
+193
+194        <receiver
+194-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:32:9-34:40
+195            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
+195-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:33:13-132
+196            android:exported="false" />
+196-->[com.google.android.datatransport:transport-runtime:2.2.6] C:\Users\punya mittal\.gradle\caches\transforms-3\ab68094be8a7f9d9c5add16ae11d666e\transformed\transport-runtime-2.2.6\AndroidManifest.xml:34:13-37
+197    </application>
+198
+199</manifest>

@@ -48,7 +48,9 @@
     <string name="local_model_download">Download</string>
     <string name="local_model_downloading">Downloading…</string>
     <string name="local_model_installed">Installed</string>
-    <string name="local_model_redownload">Download again</string>
+    <string name="local_model_redownload">Replace file</string>
+    <string name="local_model_replace_title">Replace this model?</string>
+    <string name="local_model_replace_body">This model is already on the phone. Replace only if the file is corrupt. A full download will run again.</string>
     <string name="local_model_cancel_download">Cancel</string>
     <string name="local_model_hf_token_hint">Hugging Face token (Gemma)</string>
     <string name="local_model_save_token">Save token</string>

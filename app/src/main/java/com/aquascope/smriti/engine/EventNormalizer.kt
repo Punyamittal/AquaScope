@@ -88,6 +88,42 @@ class EventNormalizer(
         )
     }
 
+    fun fromObservation(
+        locationLabel: String,
+        summary: String,
+        source: String,
+        eventType: EventType,
+        anomalyScore: Double,
+        evidenceNotes: List<String>
+    ): PhysicalEvent {
+        val locationId = "LOC_" + locationLabel.uppercase()
+            .replace(Regex("[^A-Z0-9]+"), "_")
+            .trim('_')
+            .take(24)
+            .ifBlank { "PHONE" }
+        val obj = ensureHomeObject(locationId, locationLabel)
+        val notes = evidenceNotes.ifEmpty { listOf(summary) }
+        return PhysicalEvent(
+            id = newId(),
+            timestampMs = System.currentTimeMillis(),
+            locationId = locationId,
+            locationLabel = locationLabel,
+            objectId = obj.id,
+            objectLabel = obj.label,
+            sensorType = SensorType.ACOUSTIC,
+            eventType = eventType,
+            anomalyScore = anomalyScore,
+            confidence = (anomalyScore / 100.0).coerceIn(0.0, 1.0),
+            baselineId = null,
+            summary = summary,
+            status = EventStatus.UNCONFIRMED,
+            evidenceState = EvidenceState.OBSERVED,
+            evidenceNotes = notes,
+            unknownNotes = listOf("Observation only — not a confirmed leak."),
+            source = source
+        )
+    }
+
     fun fromScan(
         locationId: String,
         locationLabel: String,

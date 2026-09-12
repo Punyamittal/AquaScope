@@ -37,6 +37,7 @@ data class BrainUiState(
     val guardianOn: Boolean = false,
     val playArmed: Boolean = false,
     val irEnabled: Boolean = false,
+    val guardianLine: String = "",
     val query: String = "",
     val recallMessage: String = "Ask what this phone remembers.",
     val recallFound: Boolean = false,
@@ -50,10 +51,9 @@ class BrainViewModel(app: Application) : AndroidViewModel(app), SensorEventListe
 
     private val memory = SmritiMemoryEngine.get(app)
     private val actuators = HardwareActuators.get(app)
+    private val prefs = NeuralCorePrefs(app)
     private val am = app.getSystemService(ActivityManager::class.java)
     private val sensors = app.getSystemService(SensorManager::class.java)
-    private var recorder: ScreenBufferRecorder? = null
-    private var ambient: AmbientAudioSensorManager? = null
     private var tts: TextToSpeech? = null
     private var lastIngestMs = 1L
 
@@ -81,9 +81,47 @@ class BrainViewModel(app: Application) : AndroidViewModel(app), SensorEventListe
             _state.update {
                 it.copy(
                     haloHardware = actuators.haloHardware,
-                    irHardware = actuators.irAvailable
+                    irHardware = actuators.irAvailable,
+                    guardianOn = GuardianService.isRunning(),
+                    playArmed = CaptureProjectionService.isRunning(),
+                    irEnabled = prefs.irArmed && actuators.irAvailable,
+                    orb = if (GuardianService.isRunning()) OrbState.LISTENING else it.orb
                 )
             }
+        }
+        viewModelScope.launch {
+            GuardianService.running.collect { on ->
+                _state.update {
+                    it.copy(
+                        guardianOn = on,
+                        orb = if (on) OrbState.LISTENING else if (it.orb == OrbState.LISTENING) OrbState.IDLE else it.orb,
+                        amplitude = if (on) it.amplitude else 0f
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            GuardianService.amplitude.collect { rms ->
+                _state.update { it.copy(amplitude = rms) }
+            }
+        }
+        viewModelScope.launch {
+            GuardianService.snapshotLine.collect { line ->
+                _state.update { it.copy(guardianLine = line) }
+            }
+        }
+        viewModelScope.launch {
+            CaptureProjectionService.running.collect { on ->
+                _state.update { it.copy(playArmed = on) }
+            }
+        }
+        viewModelScope.launch {
+            NeuralCoreSession.clipTick.collect {
+                if (it > 0L) runCatching { reloadTimeline() }
+            }
+        }
+        if (prefs.guardianOn && !GuardianService.isRunning()) {
+            runCatching { GuardianService.start(app) }
         }
     }
 
@@ -194,7 +232,7 @@ class BrainViewModel(app: Application) : AndroidViewModel(app), SensorEventListe
             val t0 = System.currentTimeMillis()
             _state.update { it.copy(orb = OrbState.COMPUTING) }
             actuators.setHalo(SmritiLightState.EXTRACTION)
-            val rec = memory.ingest(raw, source)
+            val rec = NeuralCoreMemory.remember(getApplication(), raw, source)
             lastIngestMs = (System.currentTimeMillis() - t0).coerceAtLeast(1)
             actuators.setHalo(rec.kind.toHalo())
             actuators.haptic(HardwareActuatorService.HAPTIC_TICK)
@@ -224,65 +262,50 @@ class BrainViewModel(app: Application) : AndroidViewModel(app), SensorEventListe
     fun toggleGuardian(on: Boolean) {
         if (on) {
             GuardianService.start(getApplication())
-            ambient?.stop()
-            ambient = AmbientAudioSensorManager(
-                getApplication(),
-                onAcoustic = { ev ->
-                    viewModelScope.launch(Dispatchers.Main) {
-                        ingestText("${ev.label} rms=${"%.2f".format(ev.rms)}", "YAMNET")
-                        val halo = AmbientAudioSensorManager.haloFor(ev.label)
-                        actuators.pulseHalo(halo, SmritiLightState.GUARDIAN, 1600)
-                        if (halo == SmritiLightState.EMERGENCY) {
-                            actuators.haptic(HardwareActuatorService.HAPTIC_ALARM)
-                            if (_state.value.irEnabled) actuators.transmitAcToggle()
-                        }
-                    }
-                },
-                onFall = {
-                    viewModelScope.launch(Dispatchers.Main) {
-                        ingestText("Fall vector: jerk then stillness", "IMU")
-                        actuators.setHalo(SmritiLightState.EMERGENCY)
-                        actuators.haptic(HardwareActuatorService.HAPTIC_ALARM)
-                    }
-                },
-                onAmplitude = { rms -> _state.update { it.copy(amplitude = rms) } }
-            )
-            ambient?.start()
-            actuators.setHalo(SmritiLightState.GUARDIAN)
             _state.update { it.copy(guardianOn = true, orb = OrbState.LISTENING) }
         } else {
-            ambient?.stop()
-            ambient = null
             GuardianService.stop(getApplication())
-            actuators.setHalo(SmritiLightState.NORMAL)
             _state.update { it.copy(guardianOn = false, orb = OrbState.IDLE, amplitude = 0f) }
         }
     }
 
     fun armPlay(resultCode: Int, data: Intent, w: Int, h: Int, dpi: Int) {
-        CaptureProjectionService.start(getApplication())
-        recorder?.stop()
-        recorder = ScreenBufferRecorder(getApplication(), memory, actuators) {
-            viewModelScope.launch { reloadTimeline() }
-        }
-        recorder?.start(resultCode, data, w, h, dpi)
-        _state.update { it.copy(playArmed = true, status = "Play ring buffer 30s") }
+        CaptureProjectionService.start(getApplication(), resultCode, data, w, h, dpi)
+        _state.update { it.copy(playArmed = true, status = "Recording last 30s into memory") }
         actuators.setHalo(SmritiLightState.GUARDIAN)
     }
 
     fun disarmPlay() {
-        recorder?.stop()
-        recorder = null
         CaptureProjectionService.stop(getApplication())
         _state.update { it.copy(playArmed = false) }
     }
 
     fun manualClip() {
-        recorder?.captureNow("manual")
+        CaptureProjectionService.captureNow(getApplication())
     }
 
     fun setIr(enabled: Boolean) {
+        prefs.irArmed = enabled
         _state.update { it.copy(irEnabled = enabled) }
+        if (enabled) {
+            val cap = actuators.irCapability()
+            actuators.haptic(HardwareActuatorService.HAPTIC_TICK)
+            NeuralCoreMemory.rememberAsync(
+                getApplication(),
+                raw = "IR blaster armed. $cap. Blast only if Guardian evidence supports it; follow-up RMS is stored.",
+                source = "IR",
+                kind = TaxonomyParser.Kind.ACOUSTIC,
+                throttleMs = 0L
+            )
+            _state.update { it.copy(status = cap) }
+        } else {
+            NeuralCoreMemory.rememberAsync(
+                getApplication(),
+                raw = "IR blaster disarmed. No further blasts until armed again.",
+                source = "IR",
+                throttleMs = 0L
+            )
+        }
     }
 
     fun setListening() {
@@ -318,8 +341,6 @@ class BrainViewModel(app: Application) : AndroidViewModel(app), SensorEventListe
 
     override fun onCleared() {
         sensors?.unregisterListener(this)
-        ambient?.stop()
-        recorder?.stop()
         tts?.shutdown()
         super.onCleared()
     }

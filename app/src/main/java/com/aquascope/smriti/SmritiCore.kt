@@ -131,6 +131,26 @@ class SmritiCore(context: Context) {
         return event
     }
 
+    fun rememberObservation(
+        summary: String,
+        source: String,
+        locationLabel: String = "This phone",
+        eventType: EventType = EventType.UNKNOWN,
+        anomalyScore: Double = 0.0,
+        evidenceNotes: List<String> = emptyList()
+    ): PhysicalEvent {
+        val event = normalizer.fromObservation(
+            locationLabel = locationLabel,
+            summary = summary,
+            source = source,
+            eventType = eventType,
+            anomalyScore = anomalyScore,
+            evidenceNotes = evidenceNotes
+        )
+        store.appendEvent(event)
+        return event
+    }
+
     fun timeline(limit: Int = 50): List<PhysicalEvent> =
         store.loadEvents().sortedByDescending { it.timestampMs }.take(limit)
 

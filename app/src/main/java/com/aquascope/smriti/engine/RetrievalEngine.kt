@@ -41,6 +41,9 @@ class RetrievalEngine(
             q.contains("bathroom") -> "bathroom"
             q.contains("pump") -> "pump"
             q.contains("pipe") -> "pipe"
+            q.contains("guardian") -> "guardian"
+            q.contains("ir blaster") || q.contains("infrared") -> "ir"
+            q.contains("recording") || q.contains("clip") -> "screen"
             else -> null
         }
 

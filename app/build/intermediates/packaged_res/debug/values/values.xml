@@ -125,9 +125,11 @@
     <string name="local_model_import">Import .task from Files</string>
     <string name="local_model_import_downloads">Use Gemma file in Downloads</string>
     <string name="local_model_installed">Installed</string>
-    <string name="local_model_redownload">Download again</string>
+    <string name="local_model_redownload">Replace file</string>
     <string name="local_model_reload">Reload model</string>
     <string name="local_model_remove">Remove installed model</string>
+    <string name="local_model_replace_body">This model is already on the phone. Replace only if the file is corrupt. A full download will run again.</string>
+    <string name="local_model_replace_title">Replace this model?</string>
     <string name="local_model_save_token">Save token</string>
     <string name="local_model_subtitle">Optional on-device model for natural phrasing. Retrieval and evidence stay the source of truth.</string>
     <string name="local_model_title">LOCAL MODEL</string>

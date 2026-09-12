@@ -180,13 +180,22 @@ fun SmritiTelemetryUI(
             QuietSwitch("Guardian", state.guardianOn, on = onGuardian)
             QuietSwitch(
                 label = "IR",
-                checked = state.irEnabled && state.irHardware,
+                checked = state.irEnabled,
                 enabled = state.irHardware,
                 on = onIr
             )
         }
         if (state.guardianOn) {
             QuietWave(state.amplitude)
+            if (state.guardianLine.isNotBlank()) {
+                Text(
+                    state.guardianLine,
+                    color = Mute,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
         }
         Row(
             Modifier.fillMaxWidth().padding(top = 6.dp),

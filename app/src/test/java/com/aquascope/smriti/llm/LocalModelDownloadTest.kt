@@ -76,4 +76,25 @@ class LocalModelDownloadTest {
         assertTrue(names.contains("Gemma3-1B-IT.task"))
         assertTrue(names.contains("Gemma3-1B-IT_q4_ekv1280.task"))
     }
+
+    @Test
+    fun `complete-enough uses catalog size with eighty percent floor`() {
+        val expected = LocalModelCatalog.gemma3_1b.sizeBytes
+        assertFalse(LocalModelDownloadPolicy.isCompleteEnough(0L, expected))
+        assertFalse(LocalModelDownloadPolicy.isCompleteEnough(LocalModelStore.MIN_BYTES + 1, expected))
+        assertFalse(LocalModelDownloadPolicy.isCompleteEnough(expected * 7 / 10, expected))
+        assertTrue(LocalModelDownloadPolicy.isCompleteEnough(expected * 8 / 10, expected))
+        assertTrue(LocalModelDownloadPolicy.isCompleteEnough(expected, expected))
+        assertTrue(LocalModelDownloadPolicy.isCompleteEnough(2_000_000L, 0L))
+        assertFalse(LocalModelDownloadPolicy.isCompleteEnough(500_000L, 0L))
+    }
+
+    @Test
+    fun `partial download suffix is not a loadable model name`() {
+        val staging = "${LocalModelCatalog.gemma3_1b.fileName}.part"
+        assertEquals("gemma3-1b-it-int4.task.part", staging)
+        assertFalse(LocalModelStore.isModelFile(staging))
+        assertFalse(LocalModelStore.isLoadableMediaPipe(staging))
+        assertTrue(LocalModelStore.isModelFile(LocalModelCatalog.gemma3_1b.fileName))
+    }
 }

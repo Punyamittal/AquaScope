@@ -75,7 +75,7 @@ object TaxonomyParser {
         }
     }
 
-    private val GAME = listOf("kill", "knock", "victory", "winner winner", "bgmi", "death cam", "clutch")
+    private val GAME = listOf("kill", "knock", "victory", "winner winner", "bgmi", "death cam", "clutch", "clip", "recording")
     private val HEALTH = listOf("mg", "tablet", "capsule", "dose", "medicine", "insulin", "medication", "pill")
     private val MONEY = listOf("invoice", "due", "payment", "₹", "rs.", "total", "amount")
     private val ACCESS = listOf("wifi", "wi-fi", "password", "gate code", "otp", "pin ")
@@ -83,7 +83,7 @@ object TaxonomyParser {
     private val PLACES = listOf("address", "street", "road", "nagar", "sector")
     private val LOCATION = listOf("parking", "level", "basement", "mall", "landmark")
     private val PEOPLE = listOf("called", "meeting", "visit", "tomorrow", "said")
-    private val ACOUSTIC = listOf("alarm", "glass", "cough", "fall", "leak", "anomaly")
+    private val ACOUSTIC = listOf("alarm", "glass", "cough", "fall", "leak", "anomaly", "guardian", "smoke", "ir blast", "infrared")
 
     private fun matches(lower: String, keys: List<String>): Boolean =
         keys.any { lower.contains(it) }

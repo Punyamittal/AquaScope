@@ -18,9 +18,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import android.view.Surface
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.io.File
 import java.nio.ByteBuffer
 import java.util.ArrayDeque
@@ -68,7 +65,8 @@ class ScreenBufferRecorder(
         sampleThread = HandlerThread("smriti-killfeed").also { it.start() }
         proj.registerCallback(object : MediaProjection.Callback() {
             override fun onStop() {
-                stop()
+                running.set(false)
+                CaptureProjectionService.notifyStopped()
             }
         }, Handler(mux.looper))
         projection = proj
@@ -254,14 +252,16 @@ class ScreenBufferRecorder(
             muxer.release()
             memory.trimClipStorage()
             onClipSaved(out)
-            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
-                memory.ingest(
-                    raw = "BGMI/FPS $reason score=${"%.2f".format(score)} clip=${out.name}",
-                    source = "SMRITI_PLAY",
-                    evidencePath = out.absolutePath,
-                    kindOverride = TaxonomyParser.Kind.GAME
-                )
-            }
+            NeuralCoreMemory.rememberAsync(
+                context = app,
+                raw = "Screen recording ($reason) score=${"%.2f".format(score)} clip=${out.name}",
+                source = "SMRITI_PLAY",
+                evidencePath = out.absolutePath,
+                kind = TaxonomyParser.Kind.GAME,
+                eventType = com.aquascope.smriti.model.EventType.UNKNOWN,
+                anomalyScore = 0.0,
+                throttleMs = 0L
+            )
             actuators.pulseHalo(com.aquascope.halo.SmritiLightState.GAME_KILL, com.aquascope.halo.SmritiLightState.GUARDIAN, 1200)
             actuators.haptic(HardwareActuatorService.HAPTIC_THUD)
         } catch (t: Throwable) {
