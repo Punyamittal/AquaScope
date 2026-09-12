@@ -2,25 +2,25 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="88dp"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:gravity="center"
+    android:layout_marginEnd="10dp"
     android:background="@drawable/bg_surface_panel"
-    android:padding="12dp"
-    android:layout_marginEnd="10dp">
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="12dp">
 
     <TextView
         android:id="@+id/textCardLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/ink_muted"
-        android:textSize="11sp"
-        android:letterSpacing="0.04" />
+        android:letterSpacing="0.04"
+        android:textColor="@color/warm_muted"
+        android:textSize="11sp" />
 
     <TextView
         android:id="@+id/textCardScore"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textSize="22sp"
-        android:fontFamily="sans-serif-medium" />
+        android:fontFamily="sans-serif-medium"
+        android:textSize="22sp" />
 </LinearLayout>

@@ -46,6 +46,7 @@ class MainActivity : AppCompatActivity() {
         binding.recyclerLocations.layoutManager = LinearLayoutManager(this)
         binding.recyclerLocations.adapter = adapter
         binding.fabNewScan.setOnClickListener { showNewLocationDialog() }
+        SmritiNav.bind(this, binding.bottomNav, SmritiNav.TAB_SCAN)
 
         ensureAudioPermission()
     }

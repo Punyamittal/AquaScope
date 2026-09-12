@@ -4,53 +4,54 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/bg_surface_panel"
-    android:padding="18dp"
-    android:layout_marginBottom="12dp"
-    android:foreground="?attr/selectableItemBackground">
+    android:paddingStart="@dimen/screen_pad"
+    android:paddingTop="16dp"
+    android:paddingEnd="@dimen/screen_pad"
+    android:paddingBottom="16dp">
 
     <TextView
         android:id="@+id/textLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/ink"
-        android:textSize="17sp"
-        android:fontFamily="sans-serif-medium" />
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/warm_white"
+        android:textSize="16sp" />
 
     <TextView
         android:id="@+id/textInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="@color/ink_muted"
-        android:textSize="13sp" />
+        android:layout_marginTop="3dp"
+        android:textColor="@color/warm_muted"
+        android:textSize="12sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="14dp"
-        android:gravity="center_vertical">
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnScan"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:minHeight="40dp"
             android:text="Scan"
-            app:icon="@drawable/ic_scan"
-            app:iconPadding="8dp"
-            android:minHeight="44dp" />
+            app:icon="@drawable/ic_nav_scan"
+            app:iconPadding="6dp"
+            app:iconTint="@color/navy_deep" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHistory"
             style="@style/Widget.AquaScope.Button.Secondary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:layout_marginStart="10dp"
-            android:text="History"
-            android:minHeight="44dp" />
+            android:minHeight="40dp"
+            android:text="History" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDelete"
@@ -58,8 +59,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
-            android:text="Delete"
-            android:minHeight="44dp"
-            android:minWidth="0dp" />
+            android:minWidth="0dp"
+            android:minHeight="40dp"
+            android:text="Delete" />
     </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="14dp"
+        android:background="@color/hairline_dark" />
 </LinearLayout>

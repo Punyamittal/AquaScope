@@ -1,0 +1,23 @@
+# Local secrets / env
+.env
+.env.local
+*.keystore
+local.properties
+
+# Android / Gradle
+.gradle/
+build/
+app/build/
+captures/
+*.apk
+*.ap_
+*.aab
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store

@@ -11,10 +11,13 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.aquascope.R;
-import com.aquascope.ui.PulseView;
+import com.aquascope.ui.AcousticFieldView;
+import com.aquascope.ui.HaloIndicatorView;
+import com.aquascope.ui.WaveformStripView;
 import com.google.android.material.button.MaterialButton;
 import java.lang.NullPointerException;
 import java.lang.Override;
@@ -22,7 +25,13 @@ import java.lang.String;
 
 public final class ActivityScanBinding implements ViewBinding {
   @NonNull
-  private final ScrollView rootView;
+  private final ConstraintLayout rootView;
+
+  @NonNull
+  public final AcousticFieldView acousticFieldIdle;
+
+  @NonNull
+  public final AcousticFieldView acousticFieldResult;
 
   @NonNull
   public final MaterialButton btnAddPoint;
@@ -32,6 +41,9 @@ public final class ActivityScanBinding implements ViewBinding {
 
   @NonNull
   public final MaterialButton btnStartScan;
+
+  @NonNull
+  public final MaterialButton btnViewEvidence;
 
   @NonNull
   public final MaterialButton btnViewReport;
@@ -49,22 +61,40 @@ public final class ActivityScanBinding implements ViewBinding {
   public final LinearLayout groupResult;
 
   @NonNull
+  public final HaloIndicatorView haloIndicator;
+
+  @NonNull
   public final LinearLayout layoutMultiPoint;
+
+  @NonNull
+  public final WaveformStripView liveWaveform;
 
   @NonNull
   public final ProgressBar progressBar;
 
   @NonNull
-  public final PulseView pulseView;
+  public final AcousticFieldView pulseView;
+
+  @NonNull
+  public final WaveformStripView resultWaveform;
 
   @NonNull
   public final HorizontalScrollView scrollMultiPoint;
+
+  @NonNull
+  public final ScrollView scrollScan;
 
   @NonNull
   public final TextView textInstruction;
 
   @NonNull
   public final TextView textLocationLabel;
+
+  @NonNull
+  public final TextView textScanComplete;
+
+  @NonNull
+  public final TextView textScanMeta;
 
   @NonNull
   public final TextView textScore;
@@ -78,31 +108,44 @@ public final class ActivityScanBinding implements ViewBinding {
   @NonNull
   public final TextView textStatus;
 
-  private ActivityScanBinding(@NonNull ScrollView rootView, @NonNull MaterialButton btnAddPoint,
-      @NonNull MaterialButton btnSetBaseline, @NonNull MaterialButton btnStartScan,
+  private ActivityScanBinding(@NonNull ConstraintLayout rootView,
+      @NonNull AcousticFieldView acousticFieldIdle, @NonNull AcousticFieldView acousticFieldResult,
+      @NonNull MaterialButton btnAddPoint, @NonNull MaterialButton btnSetBaseline,
+      @NonNull MaterialButton btnStartScan, @NonNull MaterialButton btnViewEvidence,
       @NonNull MaterialButton btnViewReport, @NonNull LinearLayout cardResult,
       @NonNull LinearLayout groupIdle, @NonNull LinearLayout groupProgress,
-      @NonNull LinearLayout groupResult, @NonNull LinearLayout layoutMultiPoint,
-      @NonNull ProgressBar progressBar, @NonNull PulseView pulseView,
-      @NonNull HorizontalScrollView scrollMultiPoint, @NonNull TextView textInstruction,
-      @NonNull TextView textLocationLabel, @NonNull TextView textScore,
-      @NonNull TextView textScoreLabel, @NonNull TextView textScoreState,
-      @NonNull TextView textStatus) {
+      @NonNull LinearLayout groupResult, @NonNull HaloIndicatorView haloIndicator,
+      @NonNull LinearLayout layoutMultiPoint, @NonNull WaveformStripView liveWaveform,
+      @NonNull ProgressBar progressBar, @NonNull AcousticFieldView pulseView,
+      @NonNull WaveformStripView resultWaveform, @NonNull HorizontalScrollView scrollMultiPoint,
+      @NonNull ScrollView scrollScan, @NonNull TextView textInstruction,
+      @NonNull TextView textLocationLabel, @NonNull TextView textScanComplete,
+      @NonNull TextView textScanMeta, @NonNull TextView textScore, @NonNull TextView textScoreLabel,
+      @NonNull TextView textScoreState, @NonNull TextView textStatus) {
     this.rootView = rootView;
+    this.acousticFieldIdle = acousticFieldIdle;
+    this.acousticFieldResult = acousticFieldResult;
     this.btnAddPoint = btnAddPoint;
     this.btnSetBaseline = btnSetBaseline;
     this.btnStartScan = btnStartScan;
+    this.btnViewEvidence = btnViewEvidence;
     this.btnViewReport = btnViewReport;
     this.cardResult = cardResult;
     this.groupIdle = groupIdle;
     this.groupProgress = groupProgress;
     this.groupResult = groupResult;
+    this.haloIndicator = haloIndicator;
     this.layoutMultiPoint = layoutMultiPoint;
+    this.liveWaveform = liveWaveform;
     this.progressBar = progressBar;
     this.pulseView = pulseView;
+    this.resultWaveform = resultWaveform;
     this.scrollMultiPoint = scrollMultiPoint;
+    this.scrollScan = scrollScan;
     this.textInstruction = textInstruction;
     this.textLocationLabel = textLocationLabel;
+    this.textScanComplete = textScanComplete;
+    this.textScanMeta = textScanMeta;
     this.textScore = textScore;
     this.textScoreLabel = textScoreLabel;
     this.textScoreState = textScoreState;
@@ -111,7 +154,7 @@ public final class ActivityScanBinding implements ViewBinding {
 
   @Override
   @NonNull
-  public ScrollView getRoot() {
+  public ConstraintLayout getRoot() {
     return rootView;
   }
 
@@ -136,6 +179,18 @@ public final class ActivityScanBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
+      id = R.id.acousticFieldIdle;
+      AcousticFieldView acousticFieldIdle = ViewBindings.findChildViewById(rootView, id);
+      if (acousticFieldIdle == null) {
+        break missingId;
+      }
+
+      id = R.id.acousticFieldResult;
+      AcousticFieldView acousticFieldResult = ViewBindings.findChildViewById(rootView, id);
+      if (acousticFieldResult == null) {
+        break missingId;
+      }
+
       id = R.id.btnAddPoint;
       MaterialButton btnAddPoint = ViewBindings.findChildViewById(rootView, id);
       if (btnAddPoint == null) {
@@ -151,6 +206,12 @@ public final class ActivityScanBinding implements ViewBinding {
       id = R.id.btnStartScan;
       MaterialButton btnStartScan = ViewBindings.findChildViewById(rootView, id);
       if (btnStartScan == null) {
+        break missingId;
+      }
+
+      id = R.id.btnViewEvidence;
+      MaterialButton btnViewEvidence = ViewBindings.findChildViewById(rootView, id);
+      if (btnViewEvidence == null) {
         break missingId;
       }
 
@@ -184,9 +245,21 @@ public final class ActivityScanBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.haloIndicator;
+      HaloIndicatorView haloIndicator = ViewBindings.findChildViewById(rootView, id);
+      if (haloIndicator == null) {
+        break missingId;
+      }
+
       id = R.id.layoutMultiPoint;
       LinearLayout layoutMultiPoint = ViewBindings.findChildViewById(rootView, id);
       if (layoutMultiPoint == null) {
+        break missingId;
+      }
+
+      id = R.id.liveWaveform;
+      WaveformStripView liveWaveform = ViewBindings.findChildViewById(rootView, id);
+      if (liveWaveform == null) {
         break missingId;
       }
 
@@ -197,14 +270,26 @@ public final class ActivityScanBinding implements ViewBinding {
       }
 
       id = R.id.pulseView;
-      PulseView pulseView = ViewBindings.findChildViewById(rootView, id);
+      AcousticFieldView pulseView = ViewBindings.findChildViewById(rootView, id);
       if (pulseView == null) {
+        break missingId;
+      }
+
+      id = R.id.resultWaveform;
+      WaveformStripView resultWaveform = ViewBindings.findChildViewById(rootView, id);
+      if (resultWaveform == null) {
         break missingId;
       }
 
       id = R.id.scrollMultiPoint;
       HorizontalScrollView scrollMultiPoint = ViewBindings.findChildViewById(rootView, id);
       if (scrollMultiPoint == null) {
+        break missingId;
+      }
+
+      id = R.id.scrollScan;
+      ScrollView scrollScan = ViewBindings.findChildViewById(rootView, id);
+      if (scrollScan == null) {
         break missingId;
       }
 
@@ -217,6 +302,18 @@ public final class ActivityScanBinding implements ViewBinding {
       id = R.id.textLocationLabel;
       TextView textLocationLabel = ViewBindings.findChildViewById(rootView, id);
       if (textLocationLabel == null) {
+        break missingId;
+      }
+
+      id = R.id.textScanComplete;
+      TextView textScanComplete = ViewBindings.findChildViewById(rootView, id);
+      if (textScanComplete == null) {
+        break missingId;
+      }
+
+      id = R.id.textScanMeta;
+      TextView textScanMeta = ViewBindings.findChildViewById(rootView, id);
+      if (textScanMeta == null) {
         break missingId;
       }
 
@@ -244,10 +341,12 @@ public final class ActivityScanBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityScanBinding((ScrollView) rootView, btnAddPoint, btnSetBaseline,
-          btnStartScan, btnViewReport, cardResult, groupIdle, groupProgress, groupResult,
-          layoutMultiPoint, progressBar, pulseView, scrollMultiPoint, textInstruction,
-          textLocationLabel, textScore, textScoreLabel, textScoreState, textStatus);
+      return new ActivityScanBinding((ConstraintLayout) rootView, acousticFieldIdle,
+          acousticFieldResult, btnAddPoint, btnSetBaseline, btnStartScan, btnViewEvidence,
+          btnViewReport, cardResult, groupIdle, groupProgress, groupResult, haloIndicator,
+          layoutMultiPoint, liveWaveform, progressBar, pulseView, resultWaveform, scrollMultiPoint,
+          scrollScan, textInstruction, textLocationLabel, textScanComplete, textScanMeta, textScore,
+          textScoreLabel, textScoreState, textStatus);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

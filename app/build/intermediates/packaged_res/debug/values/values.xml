@@ -1,107 +1,272 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="accent">@color/brand_bright</color>
-    <color name="background">@color/bg_mist</color>
-    <color name="bg_mist">#E4F0EE</color>
-    <color name="bg_mist_deep">#C8E0DC</color>
-    <color name="brand">#0B4F54</color>
-    <color name="brand_bright">#2A9D8F</color>
-    <color name="brand_mid">#167A7F</color>
-    <color name="hairline">#C5D6D4</color>
-    <color name="ink">#122326</color>
-    <color name="ink_faint">#8A9A9C</color>
-    <color name="ink_muted">#5A6E71</color>
-    <color name="on_brand">#F4FFFE</color>
-    <color name="primary">@color/brand</color>
-    <color name="primary_dark">#083C40</color>
-    <color name="ripple">#33167A7F</color>
-    <color name="status_alert">#B13A3A</color>
-    <color name="status_alert_bg">#F5DADA</color>
-    <color name="status_ok">#1F7A4D</color>
-    <color name="status_ok_bg">#D8F0E4</color>
-    <color name="status_warn">#B56B12</color>
-    <color name="status_warn_bg">#F7E8D0</color>
-    <color name="surface">#F7FBFA</color>
-    <color name="surface_elevated">#FFFFFF</color>
-    <dimen name="brand_size">40sp</dimen>
-    <dimen name="btn_radius">12dp</dimen>
-    <dimen name="row_radius">14dp</dimen>
-    <dimen name="score_size">64sp</dimen>
+    <color name="accent">@color/amber</color>
+    <color name="amber">#D99A3A</color>
+    <color name="amber_soft">#33D99A3A</color>
+    <color name="background">@color/navy_deep</color>
+    <color name="bg_mist">@color/navy_deep</color>
+    <color name="bg_mist_deep">#051018</color>
+    <color name="brand">@color/warm_white</color>
+    <color name="brand_bright">@color/amber</color>
+    <color name="brand_mid">@color/cyan</color>
+    <color name="cyan">#4AAFC2</color>
+    <color name="cyan_glow">#554AAFC2</color>
+    <color name="cyan_soft">#334AAFC2</color>
+    <color name="hairline">@color/hairline_dark</color>
+    <color name="hairline_dark">#1E3F55</color>
+    <color name="ink">@color/warm_white</color>
+    <color name="ink_faint">@color/warm_faint</color>
+    <color name="ink_muted">@color/warm_muted</color>
+    <color name="nav_idle">#66F5F5F0</color>
+    <color name="navy">#0C2A43</color>
+    <color name="navy_deep">#071A2B</color>
+    <color name="navy_mid">#0E3A58</color>
+    <color name="ocean">#126A8A</color>
+    <color name="on_brand">@color/navy_deep</color>
+    <color name="overlay_panel">#CC0C2A43</color>
+    <color name="paper_ink">#071A2B</color>
+    <color name="paper_mist">#C5DCE3</color>
+    <color name="paper_sky">#FAF9F3</color>
+    <color name="primary">@color/cyan</color>
+    <color name="primary_dark">@color/navy_deep</color>
+    <color name="ripple">@color/sys_ripple</color>
+    <color name="smriti_accent">@color/amber</color>
+    <color name="smriti_bg">@color/navy_deep</color>
+    <color name="smriti_ink">@color/warm_white</color>
+    <color name="smriti_line">@color/hairline_dark</color>
+    <color name="smriti_muted">@color/warm_muted</color>
+    <color name="smriti_panel">@color/overlay_panel</color>
+    <color name="status_alert">@color/amber</color>
+    <color name="status_alert_bg">@color/amber_soft</color>
+    <color name="status_ok">@color/cyan</color>
+    <color name="status_ok_bg">#22126A8A</color>
+    <color name="status_warn">@color/amber</color>
+    <color name="status_warn_bg">@color/amber_soft</color>
+    <color name="surface">@color/navy</color>
+    <color name="surface_elevated">@color/navy_mid</color>
+    <color name="sys_bg">@color/navy_deep</color>
+    <color name="sys_ink">@color/warm_white</color>
+    <color name="sys_ink_secondary">@color/warm_muted</color>
+    <color name="sys_ink_tertiary">@color/warm_faint</color>
+    <color name="sys_line">@color/hairline_dark</color>
+    <color name="sys_on_accent">@color/navy_deep</color>
+    <color name="sys_orange">@color/amber</color>
+    <color name="sys_orange_soft">@color/amber_soft</color>
+    <color name="sys_ripple">#22D99A3A</color>
+    <color name="sys_surface">@color/navy</color>
+    <color name="warm_faint">#7A9398</color>
+    <color name="warm_muted">#B7C9C8</color>
+    <color name="warm_white">#F5F5F0</color>
+    <dimen name="brand_size">28sp</dimen>
+    <dimen name="btn_radius">28dp</dimen>
+    <dimen name="nav_circle">48dp</dimen>
+    <dimen name="nav_height">88dp</dimen>
+    <dimen name="row_radius">20dp</dimen>
+    <dimen name="score_size">56sp</dimen>
     <dimen name="screen_pad">24dp</dimen>
-    <dimen name="section_gap">28dp</dimen>
+    <dimen name="section_gap">24dp</dimen>
     <string name="add_point">Scan next point</string>
-    <string name="analyzing">Extracting acoustic signature…</string>
-    <string name="anomaly_score">Anomaly score</string>
-    <string name="app_name">AquaScope</string>
+    <string name="analyzing">COMPARING TO BASELINE</string>
+    <string name="anomaly_observed">ANOMALY OBSERVED</string>
+    <string name="anomaly_score">ANOMALY SCORE</string>
+    <string name="app_name">SMRITI AQUA</string>
+    <string name="aquascope_title">AQUASCOPE</string>
+    <string name="ask_anything_hint">Ask anything…</string>
+    <string name="ask_hello">Hello</string>
+    <string name="ask_help_prompt">How can I help\nyou today?</string>
+    <string name="ask_smriti">ASK SMRITI</string>
+    <string name="ask_subtitle">Ask what your home remembers.</string>
+    <string name="baseline_deviation">BASELINE DEVIATION</string>
+    <string name="current_response">CURRENT RESPONSE</string>
     <string name="done">Done</string>
     <string name="empty_history">No scans recorded yet</string>
-    <string name="empty_locations_body">Create a location, set a dry baseline, then compare later scans for moisture anomalies.</string>
-    <string name="empty_locations_title">No locations yet</string>
+    <string name="empty_locations_body">Create a location, set a dry baseline, then compare later scans. SMRITI will remember what AquaScope observes.</string>
+    <string name="empty_locations_title">No scan locations yet</string>
+    <string name="empty_memory">No memories yet. Run an AquaScope scan to begin.</string>
+    <string name="explore_memory">Explore memory</string>
+    <string name="frequency_response">FREQUENCY RESPONSE</string>
     <string name="generate_report">Generate report</string>
+    <string name="halo_bright_high">High</string>
+    <string name="halo_bright_low">Low</string>
+    <string name="halo_bright_med">Med</string>
+    <string name="halo_brightness">Brightness</string>
+    <string name="halo_enable">Monster Halo</string>
+    <string name="halo_legend">cyan = normal · blue = sensing · purple = processing · white = memory · amber = anomaly · red = confirmed · teal = recall · neutral white = unknown</string>
+    <string name="halo_night">Disable physical light (night / privacy)</string>
+    <string name="halo_open_settings">Open OriginOS rear light settings</string>
+    <string name="halo_photo_caption">Monster Halo sits around the rear camera island. Your phone communicates SMRITI\'s state through this physical light.</string>
+    <string name="halo_photo_cd">iQOO 15 Monster Halo light around the rear camera</string>
+    <string name="halo_preview">Preview state cycle</string>
+    <string name="halo_section_title">SMRITI LIGHT · MONSTER HALO</string>
+    <string name="halo_show_sim">Show on-screen light indicator</string>
+    <string name="halo_test_solid">Test physical light (solid cyan)</string>
     <string name="history_title">Scan history</string>
     <string name="hold_instruction">Press the phone flat against the wall or pipe so the speaker and mic both touch the surface.</string>
-    <string name="locations_heading">Scan locations</string>
+    <string name="home_status">HOME STATUS</string>
+    <string name="insufficient_evidence">INSUFFICIENT EVIDENCE</string>
+    <string name="label_evidence">EVIDENCE</string>
+    <string name="label_inferred">INFERRED</string>
+    <string name="label_observed">OBSERVED</string>
+    <string name="label_unknown">UNKNOWN</string>
+    <string name="local_model_accept_license">Accept Gemma license</string>
+    <string name="local_model_cancel_download">Cancel</string>
+    <string name="local_model_download">Download</string>
+    <string name="local_model_download_subtitle">Fetch a MediaPipe .task into on-device storage. Ask still works with rules only if you skip this.</string>
+    <string name="local_model_download_title">DOWNLOAD</string>
+    <string name="local_model_downloading">Downloading…</string>
+    <string name="local_model_enable">Use local model when available</string>
+    <string name="local_model_get_token">Get token</string>
+    <string name="local_model_hf_token_hint">Hugging Face token (Gemma)</string>
+    <string name="local_model_howto">Install on iQOO 15</string>
+    <string name="local_model_howto_body">1. Tap Download on Gemma 3 1B (recommended) or Qwen 2.5 1.5B.\n2. Gemma is gated: accept the license on Hugging Face, create a token, paste it, then download. Qwen does not need a token.\n3. Keep the app open until the bar finishes. A dropped download can resume.\n4. You can still Import a .task from Downloads, or adb push into files/smriti_models/.\n5. Ask SMRITI still works offline with rules if no model is installed.\n\nNever rely on the model for leak confirmation — evidence remains authoritative.</string>
+    <string name="local_model_import">Import .task / .bin model</string>
+    <string name="local_model_installed">Installed</string>
+    <string name="local_model_redownload">Download again</string>
+    <string name="local_model_reload">Reload model</string>
+    <string name="local_model_remove">Remove installed model</string>
+    <string name="local_model_save_token">Save token</string>
+    <string name="local_model_subtitle">Optional on-device model for natural phrasing. Retrieval and evidence stay the source of truth.</string>
+    <string name="local_model_title">LOCAL MODEL</string>
+    <string name="local_model_token_cleared">Token cleared</string>
+    <string name="local_model_token_empty">Paste a Hugging Face token first</string>
+    <string name="local_model_token_saved">Token saved on this device</string>
+    <string name="locations_heading">ACOUSTIC SCAN</string>
+    <string name="memory_recorded">MEMORY RECORDED</string>
+    <string name="memory_subtitle">Everything your home has remembered.</string>
+    <string name="memory_timeline">MEMORY</string>
+    <string name="nav_ask">Ask</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_memory">Memory</string>
+    <string name="nav_scan">Scan</string>
+    <string name="nav_system">System</string>
     <string name="new_location">New location</string>
+    <string name="physical_memory">PHYSICAL MEMORY</string>
+    <string name="range_month">THIS MONTH</string>
+    <string name="range_today">TODAY</string>
+    <string name="range_week">THIS WEEK</string>
+    <string name="recent_memory">RECENT MEMORY</string>
     <string name="report_avg">Avg</string>
     <string name="report_detail_heading">Point detail</string>
     <string name="report_eyebrow">Session report</string>
     <string name="report_max">Max</string>
     <string name="report_points">Points</string>
-    <string name="scanning">Listening to the surface…</string>
+    <string name="scan_acoustic_active">ACOUSTIC SCAN ACTIVE</string>
+    <string name="scan_calibrating">CALIBRATING…</string>
+    <string name="scan_complete">SCAN COMPLETE</string>
+    <string name="scan_initializing">INITIALIZING SENSOR</string>
+    <string name="scan_processing">PROCESSING</string>
+    <string name="scanning">SCANNING</string>
     <string name="set_baseline">Save as baseline</string>
     <string name="share_report">Share report</string>
-    <string name="start_scan">Start scan</string>
-    <string name="tagline">Acoustic moisture sensing</string>
+    <string name="smriti_home_sub">HOME MEMORY</string>
+    <string name="smriti_home_title">SMRITI</string>
+    <string name="start_scan">Begin scan</string>
+    <string name="system_subtitle">iQOO 15 expression, local intelligence, and privacy.</string>
+    <string name="system_title">SYSTEM</string>
+    <string name="tagline">Your home has a memory.</string>
+    <string name="view_evidence">View evidence</string>
+    <string name="view_memory">View memory</string>
     <string name="view_report">View session report</string>
-    <style name="Text.AquaScope.Body" parent="TextAppearance.Material3.BodyLarge">
-        <item name="android:textColor">@color/ink_muted</item>
+    <string name="why_smriti">WHY SMRITI THINKS THIS</string>
+    <style name="Text.AquaScope.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">@color/warm_muted</item>
         <item name="android:lineSpacingMultiplier">1.25</item>
     </style>
-    <style name="Text.AquaScope.Brand" parent="TextAppearance.Material3.DisplaySmall">
-        <item name="android:textColor">@color/brand</item>
+    <style name="Text.AquaScope.Brand" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">@color/warm_white</item>
         <item name="android:textSize">@dimen/brand_size</item>
-        <item name="android:letterSpacing">0.12</item>
+        <item name="android:letterSpacing">0.22</item>
+        <item name="android:fontFamily">sans-serif-light</item>
+    </style>
+    <style name="Text.AquaScope.Caption" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textColor">@color/warm_faint</item>
         <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.18</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
-    <style name="Text.AquaScope.Headline" parent="TextAppearance.Material3.HeadlineSmall">
-        <item name="android:textColor">@color/ink</item>
+    <style name="Text.AquaScope.Headline" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">@color/warm_white</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
-    <style name="Text.AquaScope.Score" parent="TextAppearance.Material3.DisplayLarge">
+    <style name="Text.AquaScope.Score" parent="TextAppearance.Material3.DisplayMedium">
         <item name="android:textSize">@dimen/score_size</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">sans-serif-light</item>
         <item name="android:letterSpacing">-0.02</item>
+        <item name="android:textColor">@color/warm_white</item>
     </style>
-    <style name="Theme.AquaScope" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/brand</item>
-        <item name="colorPrimaryDark">@color/primary_dark</item>
-        <item name="colorSecondary">@color/brand_bright</item>
-        <item name="colorAccent">@color/brand_bright</item>
-        <item name="android:statusBarColor">@color/brand</item>
-        <item name="android:navigationBarColor">@color/bg_mist</item>
-        <item name="android:windowBackground">@drawable/bg_screen</item>
-        <item name="android:textColorPrimary">@color/ink</item>
-        <item name="android:textColorSecondary">@color/ink_muted</item>
+    <style name="Theme.AquaScope" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/cyan</item>
+        <item name="colorPrimaryDark">@color/navy_deep</item>
+        <item name="colorSecondary">@color/amber</item>
+        <item name="colorAccent">@color/amber</item>
+        <item name="colorOnPrimary">@color/navy_deep</item>
+        <item name="colorSurface">@color/navy</item>
+        <item name="colorOnSurface">@color/warm_white</item>
+        <item name="android:statusBarColor">@color/navy_deep</item>
+        <item name="android:navigationBarColor">@color/navy_deep</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/navy_deep</item>
+        <item name="android:textColorPrimary">@color/warm_white</item>
+        <item name="android:textColorSecondary">@color/warm_muted</item>
+        <item name="android:colorBackground">@color/navy_deep</item>
         <item name="materialButtonStyle">@style/Widget.AquaScope.Button</item>
+        <item name="bottomNavigationStyle">@style/Widget.AquaScope.BottomNav</item>
+        <item name="chipStyle">@style/Widget.Smriti.Chip</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.Smriti.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Smriti.Dialog</item>
+    </style>
+    <style name="ThemeOverlay.Smriti.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/navy</item>
+        <item name="android:textColorPrimary">@color/warm_white</item>
+        <item name="android:textColorSecondary">@color/warm_muted</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.AquaScope.Button.Ghost</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.AquaScope.Button.Ghost</item>
+    </style>
+    <style name="Widget.AquaScope.BottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="android:background">@color/navy_deep</item>
+        <item name="elevation">0dp</item>
+        <item name="itemIconTint">@color/nav_item_color</item>
+        <item name="itemTextColor">@color/nav_item_color</item>
+        <item name="itemRippleColor">@color/cyan_soft</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.AquaScope.NavIndicator</item>
+        <item name="labelVisibilityMode">labeled</item>
     </style>
     <style name="Widget.AquaScope.Button" parent="Widget.Material3.Button">
         <item name="android:textAllCaps">false</item>
-        <item name="cornerRadius">@dimen/btn_radius</item>
-        <item name="backgroundTint">@color/brand</item>
-        <item name="android:textColor">@color/on_brand</item>
-        <item name="android:minHeight">52dp</item>
-        <item name="android:letterSpacing">0.02</item>
+        <item name="cornerRadius">28dp</item>
+        <item name="backgroundTint">@color/cyan</item>
+        <item name="android:textColor">@color/navy_deep</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:textSize">14sp</item>
+        <item name="elevation">0dp</item>
+        <item name="rippleColor">@color/cyan_soft</item>
     </style>
     <style name="Widget.AquaScope.Button.Ghost" parent="Widget.Material3.Button.TextButton">
         <item name="android:textAllCaps">false</item>
-        <item name="android:textColor">@color/brand_mid</item>
+        <item name="android:textColor">@color/cyan</item>
     </style>
     <style name="Widget.AquaScope.Button.Secondary" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:textAllCaps">false</item>
-        <item name="cornerRadius">@dimen/btn_radius</item>
-        <item name="strokeColor">@color/brand</item>
-        <item name="android:textColor">@color/brand</item>
-        <item name="android:minHeight">48dp</item>
+        <item name="cornerRadius">28dp</item>
+        <item name="strokeColor">@color/ocean</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="android:textColor">@color/warm_white</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="elevation">0dp</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+    </style>
+    <style name="Widget.AquaScope.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/cyan_soft</item>
+    </style>
+    <style name="Widget.Smriti.Chip" parent="Widget.Material3.Chip.Assist">
+        <item name="chipBackgroundColor">@color/navy</item>
+        <item name="chipStrokeColor">@color/ocean</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="android:textColor">@color/warm_muted</item>
+        <item name="chipCornerRadius">20dp</item>
+        <item name="rippleColor">@color/cyan_soft</item>
+        <item name="checkedIconVisible">false</item>
     </style>
 </resources>

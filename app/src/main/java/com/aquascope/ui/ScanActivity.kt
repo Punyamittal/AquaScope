@@ -19,8 +19,12 @@ import com.aquascope.dsp.AcousticFeatures
 import com.aquascope.dsp.Deconvolution
 import com.aquascope.dsp.FeatureExtractor
 import com.aquascope.databinding.ActivityScanBinding
+import com.aquascope.halo.SmritiLightMapper
+import com.aquascope.halo.SmritiLightState
 import com.aquascope.report.ReportPoint
 import com.aquascope.report.SessionReport
+import com.aquascope.smriti.SmritiCore
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class ScanActivity : AppCompatActivity() {
@@ -28,8 +32,11 @@ class ScanActivity : AppCompatActivity() {
     private lateinit var binding: ActivityScanBinding
     private lateinit var repo: ScanRepository
     private lateinit var audioEngine: AudioEngine
+    private lateinit var smriti: SmritiCore
+    private lateinit var haloBind: HaloBinding
     private var locationId: String = ""
     private var locationLabel: String = ""
+    private var lastSmritiEventId: String? = null
 
     private val sessionPoints = mutableListOf<ReportPoint>()
 
@@ -40,6 +47,8 @@ class ScanActivity : AppCompatActivity() {
 
         repo = ScanRepository(this)
         audioEngine = AudioEngine(this)
+        smriti = SmritiCore.get(this)
+        haloBind = HaloBinding(this, binding.haloIndicator)
         locationId = intent.getStringExtra("location_id") ?: run { finish(); return }
 
         val location = repo.getLocation(locationId)
@@ -54,43 +63,85 @@ class ScanActivity : AppCompatActivity() {
         binding.btnStartScan.setOnClickListener { runScan() }
         binding.btnAddPoint.setOnClickListener { addMultiPoint() }
         binding.btnViewReport.setOnClickListener { openSessionReport() }
+        binding.btnViewEvidence.setOnClickListener {
+            val eid = lastSmritiEventId
+            if (eid != null) {
+                startActivity(Intent(this, EvidenceActivity::class.java).putExtra("event_id", eid))
+            }
+        }
 
         showIdle()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        haloBind.start()
+        if (binding.groupIdle.visibility == View.VISIBLE) {
+            haloBind.controller().setState(SmritiLightState.NORMAL)
+        }
+    }
+
+    override fun onPause() {
+        haloBind.stop()
+        super.onPause()
     }
 
     private fun showIdle() {
         binding.groupIdle.visibility = View.VISIBLE
         binding.groupProgress.visibility = View.GONE
         binding.groupResult.visibility = View.GONE
-        binding.pulseView.stopPulse()
+        binding.pulseView.setScanning(false)
+        binding.pulseView.clearSignal()
+        binding.liveWaveform.clear()
+        binding.acousticFieldIdle.clearSignal()
+        if (::haloBind.isInitialized) {
+            haloBind.controller().setState(SmritiLightState.NORMAL)
+        }
     }
 
     private fun showProgress() {
         binding.groupIdle.visibility = View.GONE
         binding.groupProgress.visibility = View.VISIBLE
         binding.groupResult.visibility = View.GONE
-        binding.pulseView.startPulse()
+        binding.pulseView.clearSignal()
+        binding.pulseView.setScanning(true)
+        binding.liveWaveform.clear()
     }
 
     private fun showResult() {
         binding.groupIdle.visibility = View.GONE
         binding.groupProgress.visibility = View.GONE
         binding.groupResult.visibility = View.VISIBLE
-        binding.pulseView.stopPulse()
+        binding.pulseView.setScanning(false)
     }
 
     private fun runScan() {
         showProgress()
-        binding.textStatus.text = getString(R.string.hold_instruction)
+        binding.textStatus.text = getString(R.string.scan_initializing)
+        haloBind.controller().setState(SmritiLightState.SCANNING)
 
         lifecycleScope.launch {
             try {
-                binding.textStatus.text = getString(R.string.scanning)
-                val capture = audioEngine.playAndRecord()
+                binding.textStatus.text = getString(R.string.scan_calibrating)
+                delay(350)
+                binding.textStatus.text = getString(R.string.scan_acoustic_active)
+                haloBind.controller().setState(SmritiLightState.SCANNING)
 
-                binding.textStatus.text = getString(R.string.analyzing)
+                val capture = audioEngine.playAndRecord { rms ->
+                    runOnUiThread {
+                        binding.pulseView.setLiveAmplitude((rms * 4f).coerceIn(0f, 1f))
+                    }
+                }
+                binding.liveWaveform.setWaveform(SignalPreview.waveform(capture.recorded))
+
+                binding.textStatus.text = getString(R.string.scan_processing)
+                haloBind.controller().setState(SmritiLightState.PROCESSING)
+                delay(200)
+
                 val impulseResponse = Deconvolution.deconvolve(capture.recorded, capture.reference)
                 val features = FeatureExtractor.extract(impulseResponse, capture.sampleRate)
+                val spectrum = SignalPreview.spectrum(impulseResponse)
+                val wave = SignalPreview.waveform(impulseResponse)
 
                 val location = repo.getLocation(locationId)
                 if (location == null) {
@@ -102,11 +153,19 @@ class ScanActivity : AppCompatActivity() {
 
                 if (location.baselineFeatures.isEmpty()) {
                     showResult()
+                    haloBind.controller().setStateBrief(
+                        SmritiLightState.NEW_MEMORY,
+                        SmritiLightState.NORMAL,
+                        900L
+                    )
                     binding.textScore.text = "—"
                     binding.textScoreLabel.text = "Capture a dry reference first"
                     binding.textScoreState.text = "BASELINE NEEDED"
+                    binding.textScanMeta.text = "No baseline remembered for this location yet."
+                    binding.acousticFieldResult.setSpectrum(spectrum, anomaly = false)
+                    binding.resultWaveform.setWaveform(wave)
                     binding.textScoreState.setTextColor(
-                        ContextCompat.getColor(this@ScanActivity, R.color.brand_mid)
+                        ContextCompat.getColor(this@ScanActivity, R.color.cyan)
                     )
                     binding.textScore.setTextColor(
                         ContextCompat.getColor(this@ScanActivity, R.color.ink)
@@ -114,13 +173,26 @@ class ScanActivity : AppCompatActivity() {
                     binding.cardResult.setBackgroundResource(R.drawable.bg_surface_panel)
                     binding.btnSetBaseline.visibility = View.VISIBLE
                     binding.btnViewReport.visibility = View.GONE
+                    binding.btnViewEvidence.visibility = View.GONE
                     binding.btnSetBaseline.text = getString(R.string.set_baseline)
                     binding.btnSetBaseline.setOnClickListener {
                         location.baselineFeatures.add(SerializableFeatures.from(features))
                         repo.updateLocation(location)
+                        val mem = smriti.rememberBaseline(
+                            location.id,
+                            location.label,
+                            features,
+                            location.baselineFeatures.size
+                        )
+                        lastSmritiEventId = mem.id
+                        haloBind.controller().setStateBrief(
+                            SmritiLightState.NEW_MEMORY,
+                            SmritiLightState.NORMAL,
+                            1000L
+                        )
                         binding.btnSetBaseline.visibility = View.GONE
-                        binding.textScoreLabel.text = "Baseline saved. Scan again to compare."
-                        binding.textScoreState.text = "READY"
+                        binding.textScoreLabel.text = "Baseline saved & remembered by SMRITI. Scan again to compare."
+                        binding.textScoreState.text = getString(R.string.memory_recorded)
                         Toast.makeText(this@ScanActivity, "Baseline saved", Toast.LENGTH_SHORT).show()
                     }
                 } else {
@@ -135,6 +207,15 @@ class ScanActivity : AppCompatActivity() {
                     )
                     repo.updateLocation(location)
 
+                    val mem = smriti.rememberScan(
+                        locationId = location.id,
+                        locationLabel = location.label,
+                        features = features,
+                        anomalyScore = score,
+                        hasBaseline = true
+                    )
+                    lastSmritiEventId = mem.id
+
                     val point = ReportPoint(
                         label = "P${sessionPoints.size + 1}",
                         anomalyScore = score,
@@ -144,13 +225,43 @@ class ScanActivity : AppCompatActivity() {
 
                     showResult()
                     displayScore(score)
+                    binding.acousticFieldResult.setSpectrum(
+                        spectrum,
+                        anomaly = score >= AnomalyThresholds.GREEN_MAX
+                    )
+                    binding.resultWaveform.setWaveform(wave)
+                    binding.textScanMeta.text = scanMeta(mem)
+                    mem.deviationVsYesterday?.let { delta ->
+                        binding.textScoreLabel.text =
+                            getString(R.string.baseline_deviation) + "  ·  ${"%+.0f".format(delta)} vs last 24h"
+                    }
                     binding.btnSetBaseline.visibility = View.VISIBLE
                     binding.btnSetBaseline.text = "Add to baseline"
                     binding.btnSetBaseline.setOnClickListener {
                         confirmAddToBaseline(location.id, features)
                     }
                     binding.btnViewReport.visibility = View.VISIBLE
+                    binding.btnViewReport.text = getString(R.string.view_memory)
+                    binding.btnViewReport.setOnClickListener {
+                        val eid = lastSmritiEventId
+                        if (eid != null) {
+                            startActivity(
+                                Intent(this@ScanActivity, MemoryDetailActivity::class.java)
+                                    .putExtra("event_id", eid)
+                            )
+                        } else {
+                            openSessionReport()
+                        }
+                    }
+                    binding.btnViewEvidence.visibility = View.VISIBLE
                     updateMultiPointCards()
+
+                    val settle = SmritiLightMapper.fromScanEvent(mem)
+                    haloBind.controller().setStateBrief(
+                        SmritiLightState.NEW_MEMORY,
+                        settle,
+                        850L
+                    )
                 }
             } catch (e: Exception) {
                 showIdle()
@@ -192,21 +303,36 @@ class ScanActivity : AppCompatActivity() {
 
     private fun displayScore(score: Double) {
         binding.textScore.text = "${score.toInt()}%"
-        binding.textScoreLabel.text = getString(R.string.anomaly_score)
+        binding.textScoreLabel.text = getString(R.string.baseline_deviation)
 
         val (state, color, bg) = when {
             score < AnomalyThresholds.GREEN_MAX ->
                 Triple("NORMAL", R.color.status_ok, R.drawable.bg_result_ok)
             score < AnomalyThresholds.YELLOW_MAX ->
-                Triple("ELEVATED", R.color.status_warn, R.drawable.bg_result_warn)
+                Triple(getString(R.string.anomaly_observed), R.color.status_warn, R.drawable.bg_result_warn)
             else ->
-                Triple("ANOMALY", R.color.status_alert, R.drawable.bg_result_alert)
+                Triple(getString(R.string.anomaly_observed), R.color.status_alert, R.drawable.bg_result_alert)
         }
 
         binding.textScoreState.text = state
         binding.textScoreState.setTextColor(ContextCompat.getColor(this, color))
         binding.textScore.setTextColor(ContextCompat.getColor(this, color))
         binding.cardResult.setBackgroundResource(bg)
+    }
+
+    private fun scanMeta(mem: com.aquascope.smriti.model.PhysicalEvent): String {
+        val fmt = java.text.SimpleDateFormat("d MMM · HH:mm", java.util.Locale.getDefault())
+        val first = smriti.firstAnomalyAt(mem.locationId)
+        return buildString {
+            append("Status    ${mem.status.name.replace('_', ' ')}\n")
+            append("Previous occurrences    ${mem.previousOccurrenceCount}")
+            if (first != null) {
+                append("\nFirst observed    ${fmt.format(java.util.Date(first.timestampMs))}")
+            }
+            mem.deviationVsYesterday?.let {
+                append("\nChange vs last 24h    ${"%+.0f".format(it)}%")
+            }
+        }
     }
 
     private fun addMultiPoint() {

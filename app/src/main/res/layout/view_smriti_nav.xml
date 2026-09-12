@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:id="@+id/navHome"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="4dp">
+
+        <ImageView
+            android:id="@+id/navHomeIcon"
+            android:layout_width="@dimen/nav_circle"
+            android:layout_height="@dimen/nav_circle"
+            android:background="@drawable/bg_nav_circle"
+            android:padding="12dp"
+            android:src="@drawable/ic_nav_home"
+            android:contentDescription="@string/nav_home" />
+
+        <TextView
+            android:id="@+id/navHomeLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/nav_home"
+            android:textColor="@color/nav_idle"
+            android:textSize="10sp"
+            android:letterSpacing="0.06" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navScan"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="4dp">
+
+        <ImageView
+            android:id="@+id/navScanIcon"
+            android:layout_width="@dimen/nav_circle"
+            android:layout_height="@dimen/nav_circle"
+            android:background="@drawable/bg_nav_circle"
+            android:padding="12dp"
+            android:src="@drawable/ic_nav_scan"
+            android:contentDescription="@string/nav_scan" />
+
+        <TextView
+            android:id="@+id/navScanLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/nav_scan"
+            android:textColor="@color/nav_idle"
+            android:textSize="10sp"
+            android:letterSpacing="0.06" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navMemory"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="4dp">
+
+        <ImageView
+            android:id="@+id/navMemoryIcon"
+            android:layout_width="@dimen/nav_circle"
+            android:layout_height="@dimen/nav_circle"
+            android:background="@drawable/bg_nav_circle"
+            android:padding="12dp"
+            android:src="@drawable/ic_nav_memory"
+            android:contentDescription="@string/nav_memory" />
+
+        <TextView
+            android:id="@+id/navMemoryLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/nav_memory"
+            android:textColor="@color/nav_idle"
+            android:textSize="10sp"
+            android:letterSpacing="0.06" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navAsk"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="4dp">
+
+        <ImageView
+            android:id="@+id/navAskIcon"
+            android:layout_width="@dimen/nav_circle"
+            android:layout_height="@dimen/nav_circle"
+            android:background="@drawable/bg_nav_circle"
+            android:padding="12dp"
+            android:src="@drawable/ic_nav_ask"
+            android:contentDescription="@string/nav_ask" />
+
+        <TextView
+            android:id="@+id/navAskLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/nav_ask"
+            android:textColor="@color/nav_idle"
+            android:textSize="10sp"
+            android:letterSpacing="0.06" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navSystem"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="4dp">
+
+        <ImageView
+            android:id="@+id/navSystemIcon"
+            android:layout_width="@dimen/nav_circle"
+            android:layout_height="@dimen/nav_circle"
+            android:background="@drawable/bg_nav_circle"
+            android:padding="12dp"
+            android:src="@drawable/ic_nav_system"
+            android:contentDescription="@string/nav_system" />
+
+        <TextView
+            android:id="@+id/navSystemLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/nav_system"
+            android:textColor="@color/nav_idle"
+            android:textSize="10sp"
+            android:letterSpacing="0.06" />
+    </LinearLayout>
+</merge>

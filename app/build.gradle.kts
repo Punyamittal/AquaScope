@@ -15,6 +15,24 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            // iQOO 15 is arm64; x86_64 keeps emulator usable for rule-path tests
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE*",
+                "META-INF/NOTICE*"
+            )
+        }
     }
 
     buildTypes {
@@ -48,6 +66,10 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // Unlock ServiceManager.getService so Monster Halo binder is reachable on Android 9+
+    implementation("org.lsposed.hiddenapibypass:hiddenapibypass:4.3")
+    // Optional on-device LLM (Gemma via MediaPipe). App runs without a model file.
+    implementation("com.google.mediapipe:tasks-genai:0.10.27")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")

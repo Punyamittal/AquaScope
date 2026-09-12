@@ -31,8 +31,8 @@ class PulseView @JvmOverloads constructor(
     private var animator: ValueAnimator? = null
     private var running = false
 
-    private val brand = ContextCompat.getColor(context, R.color.brand_bright)
-    private val brandMid = ContextCompat.getColor(context, R.color.brand_mid)
+    private val brand = ContextCompat.getColor(context, R.color.cyan)
+    private val brandMid = ContextCompat.getColor(context, R.color.ocean)
 
     fun startPulse() {
         if (running) return
@@ -54,8 +54,26 @@ class PulseView @JvmOverloads constructor(
         animator?.cancel()
         animator = null
         progress = 0f
+        liveAmp = 0f
         invalidate()
     }
+
+    /** Compatibility with ScanActivity sensing UI. */
+    fun setScanning(value: Boolean) {
+        if (value) startPulse() else stopPulse()
+    }
+
+    fun setLiveAmplitude(rms: Float) {
+        liveAmp = rms.coerceIn(0f, 1f)
+        invalidate()
+    }
+
+    fun clearSignal() {
+        liveAmp = 0f
+        invalidate()
+    }
+
+    private var liveAmp = 0f
 
     override fun onDetachedFromWindow() {
         stopPulse()

@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.aquascope.R;
+import com.aquascope.ui.SmritiNavBar;
 import com.google.android.material.button.MaterialButton;
 import java.lang.NullPointerException;
 import java.lang.Override;
@@ -24,6 +25,9 @@ public final class ActivityMainBinding implements ViewBinding {
   private final ConstraintLayout rootView;
 
   @NonNull
+  public final SmritiNavBar bottomNav;
+
+  @NonNull
   public final View brandBand;
 
   @NonNull
@@ -31,6 +35,12 @@ public final class ActivityMainBinding implements ViewBinding {
 
   @NonNull
   public final MaterialButton fabNewScan;
+
+  @NonNull
+  public final LinearLayout headerBar;
+
+  @NonNull
+  public final View headerLine;
 
   @NonNull
   public final RecyclerView recyclerLocations;
@@ -47,15 +57,19 @@ public final class ActivityMainBinding implements ViewBinding {
   @NonNull
   public final ImageView waveDecor;
 
-  private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull View brandBand,
-      @NonNull LinearLayout emptyState, @NonNull MaterialButton fabNewScan,
+  private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull SmritiNavBar bottomNav,
+      @NonNull View brandBand, @NonNull LinearLayout emptyState, @NonNull MaterialButton fabNewScan,
+      @NonNull LinearLayout headerBar, @NonNull View headerLine,
       @NonNull RecyclerView recyclerLocations, @NonNull TextView textAppTitle,
       @NonNull TextView textSectionLabel, @NonNull TextView textSubtitle,
       @NonNull ImageView waveDecor) {
     this.rootView = rootView;
+    this.bottomNav = bottomNav;
     this.brandBand = brandBand;
     this.emptyState = emptyState;
     this.fabNewScan = fabNewScan;
+    this.headerBar = headerBar;
+    this.headerLine = headerLine;
     this.recyclerLocations = recyclerLocations;
     this.textAppTitle = textAppTitle;
     this.textSectionLabel = textSectionLabel;
@@ -90,6 +104,12 @@ public final class ActivityMainBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
+      id = R.id.bottomNav;
+      SmritiNavBar bottomNav = ViewBindings.findChildViewById(rootView, id);
+      if (bottomNav == null) {
+        break missingId;
+      }
+
       id = R.id.brandBand;
       View brandBand = ViewBindings.findChildViewById(rootView, id);
       if (brandBand == null) {
@@ -105,6 +125,18 @@ public final class ActivityMainBinding implements ViewBinding {
       id = R.id.fabNewScan;
       MaterialButton fabNewScan = ViewBindings.findChildViewById(rootView, id);
       if (fabNewScan == null) {
+        break missingId;
+      }
+
+      id = R.id.headerBar;
+      LinearLayout headerBar = ViewBindings.findChildViewById(rootView, id);
+      if (headerBar == null) {
+        break missingId;
+      }
+
+      id = R.id.headerLine;
+      View headerLine = ViewBindings.findChildViewById(rootView, id);
+      if (headerLine == null) {
         break missingId;
       }
 
@@ -138,8 +170,9 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityMainBinding((ConstraintLayout) rootView, brandBand, emptyState, fabNewScan,
-          recyclerLocations, textAppTitle, textSectionLabel, textSubtitle, waveDecor);
+      return new ActivityMainBinding((ConstraintLayout) rootView, bottomNav, brandBand, emptyState,
+          fabNewScan, headerBar, headerLine, recyclerLocations, textAppTitle, textSectionLabel,
+          textSubtitle, waveDecor);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

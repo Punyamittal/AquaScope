@@ -33,7 +33,9 @@ class AudioEngine(
         val sampleRate: Int
     )
 
-    suspend fun playAndRecord(): CaptureResult = withContext(Dispatchers.IO) {
+    suspend fun playAndRecord(
+        onAmplitude: ((Float) -> Unit)? = null
+    ): CaptureResult = withContext(Dispatchers.IO) {
         val sampleRate = pickSampleRate()
         val totalRecordSamples = ((chirpDurationSec + tailDurationSec) * sampleRate).toInt()
         val chirp = ChirpGenerator.generate(
@@ -112,6 +114,16 @@ class AudioEngine(
                     minOf(4096, totalRecordSamples - totalRead)
                 )
                 if (read > 0) {
+                    if (onAmplitude != null) {
+                        var sum = 0.0
+                        val start = totalRead
+                        val end = totalRead + read
+                        for (i in start until end) {
+                            val s = recordedShorts[i] / 32768.0
+                            sum += s * s
+                        }
+                        onAmplitude(kotlin.math.sqrt(sum / read).toFloat())
+                    }
                     totalRead += read
                 } else {
                     throw IllegalStateException("Microphone read failed (code $read)")

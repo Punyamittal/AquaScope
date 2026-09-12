@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="screen_pad">24dp</dimen>
-    <dimen name="section_gap">28dp</dimen>
-    <dimen name="brand_size">40sp</dimen>
-    <dimen name="score_size">64sp</dimen>
-    <dimen name="row_radius">14dp</dimen>
-    <dimen name="btn_radius">12dp</dimen>
+    <dimen name="section_gap">24dp</dimen>
+    <dimen name="brand_size">28sp</dimen>
+    <dimen name="score_size">56sp</dimen>
+    <dimen name="row_radius">20dp</dimen>
+    <dimen name="btn_radius">28dp</dimen>
+    <dimen name="nav_height">88dp</dimen>
+    <dimen name="nav_circle">48dp</dimen>
 </resources>
