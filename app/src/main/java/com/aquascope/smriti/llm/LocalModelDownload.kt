@@ -1,7 +1,7 @@
 package com.aquascope.smriti.llm
 
 import android.content.Context
-import android.net.ConnectivityManager
+import android.os.PowerManager
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -14,10 +14,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.Call
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 sealed class DownloadState {
     object Idle : DownloadState()
@@ -35,10 +37,24 @@ sealed class DownloadState {
 }
 
 object LocalModelDownloadPolicy {
-    fun normalizeToken(raw: String?): String? {
+    private val HF_TOKEN = Regex("hf_[A-Za-z0-9]{8,}")
+
+    fun normalizeToken(raw: String?): String? = extractHfToken(raw)
+
+    fun extractHfToken(raw: String?): String? {
         val trimmed = raw?.trim().orEmpty()
         if (trimmed.isEmpty()) return null
-        return trimmed.removePrefix("Bearer ").trim().ifEmpty { null }
+        val stripped = trimmed.removePrefix("Bearer ").trim()
+        val match = HF_TOKEN.find(stripped)
+        if (match != null) return match.value
+        return stripped.ifEmpty { null }
+    }
+
+    fun maskToken(token: String): String {
+        val t = token.trim()
+        if (t.isBlank()) return ""
+        val tail = t.takeLast(4)
+        return if (t.length <= 8) "••••$tail" else "${t.take(3)}••••$tail"
     }
 
     fun needsAccessToken(httpCode: Int): Boolean = httpCode == 401 || httpCode == 403
@@ -67,6 +83,12 @@ object LocalModelDownloadPolicy {
         if (expectedBytes <= 0L) return true
         return actualBytes >= expectedBytes * 8 / 10
     }
+
+    /** Bearer belongs only on huggingface.co — CDN/xethub hosts reject it with 403. */
+    fun shouldAttachHfToken(host: String): Boolean {
+        val h = host.lowercase(Locale.US)
+        return h == "huggingface.co" || h == "www.huggingface.co"
+    }
 }
 
 /**
@@ -81,35 +103,70 @@ class LocalModelDownloader(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val state: StateFlow<DownloadState> = _state.asStateFlow()
+    private val http: OkHttpClient = OkHttpClient.Builder()
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .retryOnConnectionFailure(true)
+        .connectTimeout(45, TimeUnit.SECONDS)
+        .readTimeout(180, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .addNetworkInterceptor { chain ->
+            val req = chain.request()
+            val next = if (LocalModelDownloadPolicy.shouldAttachHfToken(req.url.host)) {
+                req
+            } else {
+                req.newBuilder().removeHeader("Authorization").build()
+            }
+            chain.proceed(next)
+        }
+        .build()
 
     @Volatile private var job: Job? = null
+    @Volatile private var call: Call? = null
 
     fun isBusy(): Boolean = job?.isActive == true
 
-    fun start(entry: LocalModelCatalog.Entry, accessToken: String?) {
-        if (isBusy()) return
+    fun start(entry: LocalModelCatalog.Entry, accessToken: String?): String? {
+        if (isBusy()) return "Download already running"
         val url = entry.downloadUrl ?: run {
             _state.value = DownloadState.Failed(entry.id, "No download URL for this model.", false)
-            return
+            return "No download URL for this model."
+        }
+        val token = LocalModelDownloadPolicy.extractHfToken(accessToken)
+        if (entry.requiresAccessToken && token.isNullOrBlank()) {
+            return "Paste a Hugging Face token, tap Save token, then Download."
         }
         job = scope.launch {
+            val wakeLock = acquireWakeLock()
+            ModelDownloadService.start(appContext, "Downloading ${entry.displayName}")
             try {
-                download(entry, url, LocalModelDownloadPolicy.normalizeToken(accessToken))
+                download(entry, url, token)
             } catch (c: CancellationException) {
+                call?.cancel()
                 _state.value = DownloadState.Idle
                 throw c
             } catch (t: Throwable) {
-                Log.w(TAG, "Download failed", t)
-                _state.value = DownloadState.Failed(
-                    entry.id,
-                    t.message ?: "Download failed",
-                    t is AccessTokenRequiredException
-                )
+                if (call?.isCanceled() == true) {
+                    _state.value = DownloadState.Idle
+                } else {
+                    Log.w(TAG, "Download failed", t)
+                    _state.value = DownloadState.Failed(
+                        entry.id,
+                        t.message ?: "Download failed",
+                        t is AccessTokenRequiredException
+                    )
+                }
+            } finally {
+                call = null
+                ModelDownloadService.stop(appContext)
+                if (wakeLock?.isHeld == true) wakeLock.release()
             }
         }
+        return null
     }
 
     fun cancel() {
+        call?.cancel()
         job?.cancel()
     }
 
@@ -125,10 +182,6 @@ class LocalModelDownloader(
         url: String,
         token: String?
     ) {
-        if (!hasNetwork()) {
-            _state.value = DownloadState.Failed(entry.id, "No network connection.", false)
-            return
-        }
         val staging = store.stagingFile(entry.fileName)
         val existing = staging.length()
         val remaining = if (entry.sizeBytes > 0) (entry.sizeBytes - existing).coerceAtLeast(0) else entry.sizeBytes
@@ -146,24 +199,35 @@ class LocalModelDownloader(
             return
         }
 
-        val connection = open(url, token, existing)
-        try {
-            val code = connection.responseCode
-            if (LocalModelDownloadPolicy.needsAccessToken(code)) {
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "*/*")
+            .header("Accept-Encoding", "identity")
+            .apply {
+                if (!token.isNullOrBlank()) header("Authorization", "Bearer $token")
+                if (existing > 0) header("Range", "bytes=$existing-")
+            }
+            .build()
+
+        val executed = http.newCall(request).also { call = it }.execute()
+        executed.use { response ->
+            val code = response.code
+            val contentType = response.header("Content-Type")
+            if (LocalModelDownloadPolicy.needsAccessToken(code) ||
+                LocalModelDownloadPolicy.isHtmlContentType(contentType)
+            ) {
                 throw AccessTokenRequiredException(tokenMessage(entry, code))
             }
-            if (code != HttpURLConnection.HTTP_OK && code != HTTP_PARTIAL) {
+            if (code != 200 && code != HTTP_PARTIAL) {
                 throw IllegalStateException("Download failed (HTTP $code).")
             }
-            val contentType = connection.contentType
-            if (LocalModelDownloadPolicy.isHtmlContentType(contentType)) {
-                throw AccessTokenRequiredException(tokenMessage(entry, code))
-            }
+
             val append = code == HTTP_PARTIAL && existing > 0
             if (!append && staging.exists()) {
                 staging.delete()
             }
-            val declared = connection.contentLengthLong
+            val declared = response.body?.contentLength() ?: -1L
             val total = when {
                 append && declared > 0 -> existing + declared
                 declared > 0 -> declared
@@ -174,7 +238,8 @@ class LocalModelDownloader(
                 throw IllegalStateException("Server did not return a model file.")
             }
 
-            connection.inputStream.use { input ->
+            val body = response.body ?: throw IllegalStateException("Empty download body.")
+            body.byteStream().use { input ->
                 FileOutputStream(staging, append).use { output ->
                     val buf = ByteArray(64 * 1024)
                     var copied = if (append) existing else 0L
@@ -224,39 +289,23 @@ class LocalModelDownloader(
             }
             val file = store.promoteStaging(entry.fileName)
             _state.value = DownloadState.Succeeded(entry.id, file.name)
-        } finally {
-            connection.disconnect()
         }
     }
 
-    private fun open(url: String, token: String?, existing: Long): HttpURLConnection {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            instanceFollowRedirects = true
-            connectTimeout = 30_000
-            readTimeout = 60_000
-            requestMethod = "GET"
-            setRequestProperty("User-Agent", USER_AGENT)
-            setRequestProperty("Accept", "application/octet-stream")
-            if (!token.isNullOrBlank()) {
-                setRequestProperty("Authorization", "Bearer $token")
+    private fun acquireWakeLock(): PowerManager.WakeLock? {
+        return runCatching {
+            val pm = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+            pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "smriti:modeldl").apply {
+                setReferenceCounted(false)
+                acquire(45 * 60 * 1000L)
             }
-            if (existing > 0) {
-                setRequestProperty("Range", "bytes=$existing-")
-            }
-        }
-        return connection
-    }
-
-    private fun hasNetwork(): Boolean {
-        val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            ?: return true
-        return cm.activeNetwork != null
+        }.getOrNull()
     }
 
     private fun tokenMessage(entry: LocalModelCatalog.Entry, code: Int): String {
         val name = entry.displayName
         return if (code == 403 || entry.requiresAccessToken) {
-            "Hugging Face blocked $name (HTTP $code). Accept the model license, create a token, paste it, then retry."
+            "Hugging Face blocked $name (HTTP $code). Accept the Gemma license, paste a token that starts with hf_, tap Save token, then retry."
         } else {
             "Sign in to Hugging Face to download $name (HTTP $code)."
         }
@@ -268,6 +317,6 @@ class LocalModelDownloader(
         private const val TAG = "SmritiModelDl"
         private const val HTTP_PARTIAL = 206
         private const val EMIT_EVERY_BYTES = 512 * 1024L
-        private const val USER_AGENT = "SMRITI-Aqua/1.0 (Android)"
+        private const val USER_AGENT = "SMRITI-Aqua/1.0 (Android) huggingface_hub/0.26.0"
     }
 }

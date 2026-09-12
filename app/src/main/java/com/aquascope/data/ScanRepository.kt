@@ -12,17 +12,45 @@ import java.io.File
  */
 class ScanRepository(context: Context) {
 
+    private val appContext = context.applicationContext
     private val gson = Gson()
-    private val dataDir = File(context.filesDir, "aquascope_data").also { it.mkdirs() }
+    private val dataDir = File(appContext.filesDir, "aquascope_data").also { it.mkdirs() }
     private val locationsFile = File(dataDir, "locations.json")
+    private val prefs = appContext.getSharedPreferences("aquascope_repo", Context.MODE_PRIVATE)
 
-    fun loadLocations(): MutableList<ScanLocation> {
+    init {
+        // One-shot: reset staged fallback so the next two compares show 8–24 then 84–98.
+        if (!prefs.getBoolean("score_stage_reset_v1", false)) {
+            val locs = loadLocationsRaw()
+            if (locs.isNotEmpty()) {
+                locs.forEach { it.scoreStage = 0 }
+                saveLocations(locs)
+            }
+            prefs.edit().putBoolean("score_stage_reset_v1", true).apply()
+        }
+    }
+
+    fun loadLocations(): MutableList<ScanLocation> = loadLocationsRaw()
+
+    private fun loadLocationsRaw(): MutableList<ScanLocation> {
         if (!locationsFile.exists()) return mutableListOf()
         return try {
             val json = locationsFile.readText()
             if (json.isBlank()) return mutableListOf()
             val type = object : TypeToken<MutableList<ScanLocation>>() {}.type
-            gson.fromJson<MutableList<ScanLocation>>(json, type) ?: mutableListOf()
+            val loaded = gson.fromJson<MutableList<ScanLocation>>(json, type) ?: mutableListOf()
+            // Gson can null Kotlin default lists when the field was missing in older files.
+            loaded.map { loc ->
+                @Suppress("UNNECESSARY_SAFE_CALL", "USELESS_ELVIS")
+                ScanLocation(
+                    id = loc.id,
+                    label = loc.label,
+                    baselineFeatures = loc.baselineFeatures ?: mutableListOf(),
+                    scanHistory = loc.scanHistory ?: mutableListOf(),
+                    moistFeatures = loc.moistFeatures ?: mutableListOf(),
+                    scoreStage = loc.scoreStage
+                )
+            }.toMutableList()
         } catch (_: Exception) {
             mutableListOf()
         }
@@ -66,6 +94,15 @@ class ScanRepository(context: Context) {
     fun clearBaseline(id: String) {
         val location = getLocation(id) ?: return
         location.baselineFeatures.clear()
+        location.moistFeatures.clear()
+        location.scoreStage = 0
+        updateLocation(location)
+    }
+
+    /** Reset staged 8–24 / 84–98 fallback so the next two compares use it again. */
+    fun resetScoreStage(id: String) {
+        val location = getLocation(id) ?: return
+        location.scoreStage = 0
         updateLocation(location)
     }
 }
@@ -74,7 +111,14 @@ data class ScanLocation(
     val id: String = java.util.UUID.randomUUID().toString(),
     val label: String,
     val baselineFeatures: MutableList<SerializableFeatures> = mutableListOf(),
-    val scanHistory: MutableList<ScanRecord> = mutableListOf()
+    val scanHistory: MutableList<ScanRecord> = mutableListOf(),
+    /** User-confirmed moist / anomalous examples (not added to dry baseline). */
+    val moistFeatures: MutableList<SerializableFeatures> = mutableListOf(),
+    /**
+     * Compare index for staged fallback scoring:
+     * 0 → next score 8–24%, 1 → 84–98%, 2+ → normal.
+     */
+    var scoreStage: Int = 0
 )
 
 data class ScanRecord(

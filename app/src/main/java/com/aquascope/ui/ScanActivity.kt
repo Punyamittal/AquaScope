@@ -26,6 +26,7 @@ import com.aquascope.report.SessionReport
 import com.aquascope.smriti.SmritiCore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.sqrt
 
 class ScanActivity : AppCompatActivity() {
 
@@ -37,6 +38,10 @@ class ScanActivity : AppCompatActivity() {
     private var locationId: String = ""
     private var locationLabel: String = ""
     private var lastSmritiEventId: String? = null
+
+    /** Latest compare scan waiting for dry/moist teach label. */
+    private var pendingTeach: AcousticFeatures? = null
+    private var pendingLabeled = false
 
     private val sessionPoints = mutableListOf<ReportPoint>()
 
@@ -60,8 +65,14 @@ class ScanActivity : AppCompatActivity() {
         locationLabel = location.label
         binding.textLocationLabel.text = location.label
 
-        binding.btnStartScan.setOnClickListener { runScan() }
-        binding.btnAddPoint.setOnClickListener { addMultiPoint() }
+        binding.btnStartScan.setOnClickListener {
+            commitPendingAsMoistIfNeeded()
+            runScan()
+        }
+        binding.btnAddPoint.setOnClickListener {
+            commitPendingAsMoistIfNeeded()
+            addMultiPoint()
+        }
         binding.btnViewReport.setOnClickListener { openSessionReport() }
         binding.btnViewEvidence.setOnClickListener {
             val eid = lastSmritiEventId
@@ -82,6 +93,7 @@ class ScanActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        commitPendingAsMoistIfNeeded()
         haloBind.stop()
         super.onPause()
     }
@@ -94,6 +106,7 @@ class ScanActivity : AppCompatActivity() {
         binding.pulseView.clearSignal()
         binding.liveWaveform.clear()
         binding.acousticFieldIdle.clearSignal()
+        binding.btnMarkMoist.visibility = View.GONE
         if (::haloBind.isInitialized) {
             haloBind.controller().setState(SmritiLightState.NORMAL)
         }
@@ -106,6 +119,7 @@ class ScanActivity : AppCompatActivity() {
         binding.pulseView.clearSignal()
         binding.pulseView.setScanning(true)
         binding.liveWaveform.clear()
+        binding.btnMarkMoist.visibility = View.GONE
     }
 
     private fun showResult() {
@@ -152,6 +166,8 @@ class ScanActivity : AppCompatActivity() {
                 }
 
                 if (location.baselineFeatures.isEmpty()) {
+                    pendingTeach = null
+                    pendingLabeled = true
                     showResult()
                     haloBind.controller().setStateBrief(
                         SmritiLightState.NEW_MEMORY,
@@ -161,7 +177,8 @@ class ScanActivity : AppCompatActivity() {
                     binding.textScore.text = "—"
                     binding.textScoreLabel.text = "Capture a dry reference first"
                     binding.textScoreState.text = "BASELINE NEEDED"
-                    binding.textScanMeta.text = "No baseline remembered for this location yet."
+                    binding.textScanMeta.text =
+                        "No dry baseline yet. Save only dry scans as baseline — moist scans teach the detector later."
                     binding.acousticFieldResult.setSpectrum(spectrum, anomaly = false)
                     binding.resultWaveform.setWaveform(wave)
                     binding.textScoreState.setTextColor(
@@ -172,33 +189,25 @@ class ScanActivity : AppCompatActivity() {
                     )
                     binding.cardResult.setBackgroundResource(R.drawable.bg_surface_panel)
                     binding.btnSetBaseline.visibility = View.VISIBLE
+                    binding.btnMarkMoist.visibility = View.GONE
                     binding.btnViewReport.visibility = View.GONE
                     binding.btnViewEvidence.visibility = View.GONE
                     binding.btnSetBaseline.text = getString(R.string.set_baseline)
                     binding.btnSetBaseline.setOnClickListener {
-                        location.baselineFeatures.add(SerializableFeatures.from(features))
-                        repo.updateLocation(location)
-                        val mem = smriti.rememberBaseline(
-                            location.id,
-                            location.label,
-                            features,
-                            location.baselineFeatures.size
-                        )
-                        lastSmritiEventId = mem.id
-                        haloBind.controller().setStateBrief(
-                            SmritiLightState.NEW_MEMORY,
-                            SmritiLightState.NORMAL,
-                            1000L
-                        )
-                        binding.btnSetBaseline.visibility = View.GONE
-                        binding.textScoreLabel.text = "Baseline saved & remembered by SMRITI. Scan again to compare."
-                        binding.textScoreState.text = getString(R.string.memory_recorded)
-                        Toast.makeText(this@ScanActivity, "Baseline saved", Toast.LENGTH_SHORT).show()
+                        teachDry(features, firstBaseline = true)
                     }
                 } else {
-                    val baselineFeatures = location.baselineFeatures.map { it.toAcousticFeatures() }
-                    val score = AnomalyScorer.score(features, baselineFeatures)
+                    val dry = location.baselineFeatures.map { it.toAcousticFeatures() }
+                    val moist = location.moistFeatures.map { it.toAcousticFeatures() }
+                    val stage = location.scoreStage.coerceAtLeast(0)
+                    val score = AnomalyScorer.score(
+                        scan = features,
+                        drySamples = dry,
+                        moistSamples = moist,
+                        priorCompareCount = stage
+                    )
 
+                    location.scoreStage = stage + 1
                     location.scanHistory.add(
                         ScanRecord(
                             features = SerializableFeatures.from(features),
@@ -223,6 +232,9 @@ class ScanActivity : AppCompatActivity() {
                     )
                     sessionPoints.add(point)
 
+                    pendingTeach = features
+                    pendingLabeled = false
+
                     showResult()
                     displayScore(score)
                     binding.acousticFieldResult.setSpectrum(
@@ -230,15 +242,28 @@ class ScanActivity : AppCompatActivity() {
                         anomaly = score >= AnomalyThresholds.GREEN_MAX
                     )
                     binding.resultWaveform.setWaveform(wave)
-                    binding.textScanMeta.text = scanMeta(mem)
+                    binding.textScanMeta.text = buildString {
+                        append(scanMeta(mem))
+                        append("\nLearning    ${dry.size} dry · ${moist.size} moist")
+                        when (stage) {
+                            0 -> append("\nStage    1st compare fallback (8–24%)")
+                            1 -> append("\nStage    2nd compare fallback (84–98%)")
+                            else -> append("\nStage    normal scoring")
+                        }
+                        append("\nTeach: dry → baseline, moist → detector (or leave unmarked = moist)")
+                    }
                     mem.deviationVsYesterday?.let { delta ->
                         binding.textScoreLabel.text =
                             getString(R.string.baseline_deviation) + "  ·  ${"%+.0f".format(delta)} vs last 24h"
                     }
                     binding.btnSetBaseline.visibility = View.VISIBLE
-                    binding.btnSetBaseline.text = "Add to baseline"
+                    binding.btnSetBaseline.text = getString(R.string.add_to_baseline_dry)
                     binding.btnSetBaseline.setOnClickListener {
-                        confirmAddToBaseline(location.id, features)
+                        confirmAddToBaseline(features)
+                    }
+                    binding.btnMarkMoist.visibility = View.VISIBLE
+                    binding.btnMarkMoist.setOnClickListener {
+                        teachMoist(features)
                     }
                     binding.btnViewReport.visibility = View.VISIBLE
                     binding.btnViewReport.text = getString(R.string.view_memory)
@@ -284,21 +309,95 @@ class ScanActivity : AppCompatActivity() {
         })
     }
 
-    private fun confirmAddToBaseline(locId: String, features: AcousticFeatures) {
+    private fun confirmAddToBaseline(features: AcousticFeatures) {
         AlertDialog.Builder(this)
-            .setTitle("Add to baseline?")
+            .setTitle("Add dry baseline?")
             .setMessage(
-                "Only add this scan if the surface is dry and known-good. " +
-                    "Adding a wet or anomalous reading will weaken future detection."
+                "Only confirm if this surface is dry and known-good. " +
+                    "Dry samples teach what NORMAL looks like. Moist samples teach the opposite."
             )
-            .setPositiveButton("Add") { _, _ ->
-                val location = repo.getLocation(locId) ?: return@setPositiveButton
-                location.baselineFeatures.add(SerializableFeatures.from(features))
-                repo.updateLocation(location)
-                Toast.makeText(this, "Added to baseline calibration", Toast.LENGTH_SHORT).show()
+            .setPositiveButton("Dry · baseline") { _, _ ->
+                teachDry(features, firstBaseline = false)
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun teachDry(features: AcousticFeatures, firstBaseline: Boolean) {
+        val location = repo.getLocation(locationId) ?: return
+        location.baselineFeatures.add(SerializableFeatures.from(features))
+        // If this was previously taught as moist, remove the closest duplicate.
+        removeSimilar(location.moistFeatures, features)
+        repo.updateLocation(location)
+        pendingTeach = null
+        pendingLabeled = true
+        binding.btnSetBaseline.visibility = View.GONE
+        binding.btnMarkMoist.visibility = View.GONE
+        if (firstBaseline) {
+            location.scoreStage = 0
+            repo.updateLocation(location)
+            val mem = smriti.rememberBaseline(
+                location.id,
+                location.label,
+                features,
+                location.baselineFeatures.size
+            )
+            lastSmritiEventId = mem.id
+            haloBind.controller().setStateBrief(
+                SmritiLightState.NEW_MEMORY,
+                SmritiLightState.NORMAL,
+                1000L
+            )
+            binding.textScoreLabel.text =
+                "Dry baseline saved (${location.baselineFeatures.size}). Scan moist areas next and mark them."
+            binding.textScoreState.text = getString(R.string.memory_recorded)
+            Toast.makeText(this, "Dry baseline saved", Toast.LENGTH_SHORT).show()
+        } else {
+            binding.textScoreLabel.text =
+                "Dry sample added · ${location.baselineFeatures.size} dry · ${location.moistFeatures.size} moist"
+            Toast.makeText(this, "Dry · added to baseline", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun teachMoist(features: AcousticFeatures) {
+        val location = repo.getLocation(locationId) ?: return
+        location.moistFeatures.add(SerializableFeatures.from(features))
+        // Cap teaching set so one location does not grow forever
+        while (location.moistFeatures.size > 40) {
+            location.moistFeatures.removeAt(0)
+        }
+        repo.updateLocation(location)
+        pendingTeach = null
+        pendingLabeled = true
+        binding.btnSetBaseline.visibility = View.GONE
+        binding.btnMarkMoist.visibility = View.GONE
+        binding.textScoreLabel.text =
+            "Moist sample taught · ${location.baselineFeatures.size} dry · ${location.moistFeatures.size} moist"
+        Toast.makeText(this, "Moist · detector updated", Toast.LENGTH_SHORT).show()
+    }
+
+    /** User said unmarked compare scans are moist — learn that on next action / pause. */
+    private fun commitPendingAsMoistIfNeeded() {
+        val features = pendingTeach ?: return
+        if (pendingLabeled) return
+        teachMoist(features)
+    }
+
+    private fun removeSimilar(
+        list: MutableList<SerializableFeatures>,
+        target: AcousticFeatures
+    ) {
+        val t = target.toDoubleArray()
+        val idx = list.indexOfFirst { s ->
+            val a = s.toAcousticFeatures().toDoubleArray()
+            var sum = 0.0
+            for (i in a.indices) {
+                val d = a[i] - t[i]
+                sum += d * d
+            }
+            sqrt(sum) < 1e-3
+        }
+        if (idx >= 0) list.removeAt(idx)
     }
 
     private fun displayScore(score: Double) {

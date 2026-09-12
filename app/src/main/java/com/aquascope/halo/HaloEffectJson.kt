@@ -118,6 +118,20 @@ object HaloEffectJson {
                 count = 80,
                 repeat = -1
             )
+            SmritiLightState.SCREEN_RECORDING -> slowPulse(
+                color = HaloPalette.CRIMSON,
+                brightness = 100,
+                periodMs = 1400,
+                count = 80,
+                repeat = -1
+            )
+            SmritiLightState.VOICE_RECORDING -> slowPulse(
+                color = HaloPalette.ORANGE,
+                brightness = b.coerceAtLeast(70),
+                periodMs = 1600,
+                count = 80,
+                repeat = -1
+            )
             SmritiLightState.EMERGENCY -> strobeWhite()
         }
     }

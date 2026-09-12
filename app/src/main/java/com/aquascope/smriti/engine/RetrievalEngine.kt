@@ -37,13 +37,26 @@ class RetrievalEngine(
         }
 
         val locationHint = when {
-            q.contains("kitchen") -> "kitchen"
+            q.contains("kitchen") && !q.contains("alert") -> "kitchen"
             q.contains("bathroom") -> "bathroom"
             q.contains("pump") -> "pump"
             q.contains("pipe") -> "pipe"
-            q.contains("guardian") -> "guardian"
-            q.contains("ir blaster") || q.contains("infrared") -> "ir"
-            q.contains("recording") || q.contains("clip") -> "screen"
+            q.contains("guardian") || q.contains("kitchen alert") ||
+                q.contains("smoke") || q.contains("glass") -> "guardian"
+            q.contains("ir blaster") || q.contains("infrared") ||
+                (q.contains("ir") && (q.contains("blast") || q.contains("pulse") || q.contains("arm"))) -> "ir"
+            q.contains("recording") || q.contains("clip") || q.contains("on screen") ||
+                q.contains("screen capture") || q.contains("screen recording") ||
+                q.contains("what was on") || q.contains("from the screen") ||
+                q.contains("what did i see") || q.contains("what did you see") ||
+                q.contains("what game") || q.contains("which game") ||
+                q.contains("what app") || q.contains("which app") ||
+                (q.contains("game") && (q.contains("open") || q.contains("play") ||
+                    q.contains("launch") || q.contains("start"))) ||
+                (q.contains("app") && (q.contains("open") || q.contains("opened"))) ||
+                (q.contains("screen") && (q.contains("see") || q.contains("saw") ||
+                    q.contains("show") || q.contains("text") || q.contains("read") ||
+                    q.contains("ocr") || q.contains("watch") || q.contains("record"))) -> "screen"
             else -> null
         }
 
@@ -68,9 +81,8 @@ class RetrievalEngine(
         var events: List<PhysicalEvent> = store.loadEvents()
 
         query.locationHint?.let { hint ->
-            events = events.filter {
-                it.locationLabel.contains(hint, ignoreCase = true) ||
-                    it.objectLabel.contains(hint, ignoreCase = true)
+            events = events.filter { ev ->
+                matchesHint(ev, hint)
             }
         }
         query.sinceMs?.let { since -> events = events.filter { it.timestampMs >= since } }
@@ -90,13 +102,61 @@ class RetrievalEngine(
                 events.filter {
                     it.eventType == EventType.NORMAL || it.eventType == EventType.BASELINE_ESTABLISHED
                 }.sortedByDescending { it.timestampMs }.take(limit)
-            else ->
-                events.sortedByDescending { it.timestampMs }.take(limit)
+            else -> {
+                // Fresh clip in session: hard-prefer screen sources so Ask doesn't mix kitchen notes.
+                val hasFreshClip = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr.isNotBlank()
+                val ranked = if (hasFreshClip || query.locationHint == "screen") {
+                    events.sortedWith(
+                        compareByDescending<PhysicalEvent> { ev ->
+                            when {
+                                ev.source.equals("SCREENMIND", true) ||
+                                    ev.source.equals("SMRITI_PLAY", true) ||
+                                    ev.source.equals("OCR", true) -> 2
+                                ev.summary.contains("Game/App opened", true) ||
+                                    ev.summary.contains("Seen on screen", true) -> 1
+                                else -> 0
+                            }
+                        }.thenByDescending { it.timestampMs }
+                    )
+                } else {
+                    events.sortedByDescending { it.timestampMs }
+                }
+                ranked.take(limit)
+            }
         }
     }
 
     fun anomalousForObject(objectId: String): List<PhysicalEvent> =
         store.eventsForObject(objectId).filter { isDeviation(it) }
+
+    private fun matchesHint(ev: PhysicalEvent, hint: String): Boolean {
+        val h = hint.lowercase(Locale.getDefault())
+        if (ev.locationLabel.contains(h, ignoreCase = true) ||
+            ev.objectLabel.contains(h, ignoreCase = true) ||
+            ev.summary.contains(h, ignoreCase = true) ||
+            ev.source.contains(h, ignoreCase = true)
+        ) {
+            return true
+        }
+        return when (h) {
+            "guardian" ->
+                ev.source.equals("GUARDIAN", true) ||
+                    ev.summary.contains("Guardian", ignoreCase = true)
+            "ir" ->
+                ev.source.equals("IR", true) ||
+                    ev.summary.contains("IR pulse", ignoreCase = true) ||
+                    ev.summary.contains("IR armed", ignoreCase = true)
+            "screen" ->
+                ev.source.equals("SMRITI_PLAY", true) ||
+                    ev.source.equals("SCREENMIND", true) ||
+                    ev.source.equals("OCR", true) ||
+                    ev.summary.contains("Screen clip", ignoreCase = true) ||
+                    ev.summary.contains("ScreenMind", ignoreCase = true) ||
+                    ev.summary.contains("Seen on screen", ignoreCase = true) ||
+                    ev.summary.contains("Game/App opened", ignoreCase = true)
+            else -> false
+        }
+    }
 
     private fun isDeviation(e: PhysicalEvent) = e.eventType in setOf(
         EventType.ACOUSTIC_DEVIATION,

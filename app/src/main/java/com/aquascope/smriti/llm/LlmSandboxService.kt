@@ -74,11 +74,16 @@ class LlmSandboxService : Service() {
         val engine = llm
         return if (engine?.isReady == true) {
             Log.i(TAG, "sandbox model ready pid=${Process.myPid()} ${engine.modelLabel}")
-            // Do NOT probe-generate here — short prompts often return empty and
-            // falsely mark a healthy MediaPipe engine as failed.
             ok(engine.modelLabel)
         } else {
-            val detail = engine?.lastError() ?: store.status().message
+            val litert = store.findInstalledLiteRt()
+            val detail = engine?.lastError()
+                ?: if (litert != null) {
+                    "Gemma 4 file is on disk (${litert.name}), but Ask still needs a MediaPipe .task " +
+                        "(Gemma 3 1B / Qwen) until LiteRT-LM is enabled on this build."
+                } else {
+                    store.status().message
+                }
             Log.w(TAG, "sandbox warmup failed: $detail")
             fail(detail)
         }

@@ -195,10 +195,12 @@ class AskSmritiActivity : SmritiScreenActivity() {
                 answer.relatedEvents.size,
                 answer.relatedEvents.maxOfOrNull { it.anomalyScore } ?: 0.0
             )
-            if (settle == SmritiLightState.UNKNOWN) {
-                binding.textEvidenceState.text = getString(R.string.insufficient_evidence)
-            } else {
-                binding.textEvidenceState.text = answer.evidenceState.name
+            binding.textEvidenceState.text = when (answer.evidenceState) {
+                EvidenceState.UNKNOWN -> getString(R.string.ask_state_unknown)
+                EvidenceState.OBSERVED -> getString(R.string.ask_state_observed)
+                EvidenceState.INFERRED -> getString(R.string.ask_state_inferred)
+                EvidenceState.POSSIBLE -> getString(R.string.ask_state_possible)
+                EvidenceState.CONFIRMED -> getString(R.string.ask_state_confirmed)
             }
             binding.textEvidenceState.setTextColor(
                 getColor(
@@ -209,7 +211,7 @@ class AskSmritiActivity : SmritiScreenActivity() {
                     }
                 )
             )
-            binding.textAnswer.text = answer.text
+            binding.textAnswer.text = com.aquascope.smriti.llm.AskAnswerCleaner.cleanForDisplay(answer.text)
             lastEvidenceEventId = answer.relatedEvents.firstOrNull()?.id
             binding.btnWhy.visibility = if (lastEvidenceEventId != null) View.VISIBLE else View.GONE
 

@@ -20,6 +20,8 @@ import com.aquascope.smriti.SmritiCore
 import com.aquascope.smriti.llm.DownloadState
 import com.aquascope.smriti.llm.LocalModelCatalog
 import com.aquascope.smriti.llm.LocalModelDownloadPolicy
+import com.aquascope.smriti.llm.OllamaPreferences
+import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -168,16 +170,21 @@ class LocalModelActivity : SmritiScreenActivity() {
             }
         }
         binding.btnSaveToken.setOnClickListener { saveTokenFromField() }
+        binding.btnClearToken.setOnClickListener { clearSavedToken() }
         binding.btnGetToken.setOnClickListener { openUrl(LocalModelCatalog.HF_TOKEN_URL) }
         binding.btnAcceptLicense.setOnClickListener {
             openUrl(LocalModelCatalog.gemma3_1b.licenseUrl ?: LocalModelCatalog.HF_TOKEN_URL)
         }
         binding.inputHfToken.setOnEditorActionListener { _, _, _ ->
-            saveTokenFromField()
+            if (!binding.inputHfToken.text.isNullOrBlank()) saveTokenFromField()
             true
         }
 
+        bindOllamaControls()
+        bindScreenMindControls()
+
         inflateDownloadCards()
+        inflateSkillToggles()
         observeDownloads()
         refreshUi(reloadModel = false)
         refreshHaloStatus()
@@ -209,6 +216,28 @@ class LocalModelActivity : SmritiScreenActivity() {
         }
     }
 
+    private fun inflateSkillToggles() {
+        binding.containerSkills.removeAllViews()
+        binding.switchSkillsMaster.setOnCheckedChangeListener(null)
+        binding.switchSkillsMaster.isChecked = smriti.skillPrefs.skillsMasterEnabled
+        binding.switchSkillsMaster.setOnCheckedChangeListener { _, checked ->
+            smriti.skillPrefs.skillsMasterEnabled = checked
+            inflateSkillToggles()
+        }
+        if (!smriti.skillPrefs.skillsMasterEnabled) return
+        smriti.skillCatalog.all().forEach { skill ->
+            val row = com.google.android.material.materialswitch.MaterialSwitch(this).apply {
+                text = "${skill.name} — ${skill.description.take(72)}"
+                isChecked = smriti.skillPrefs.isEnabled(skill.id)
+                setTextColor(getColor(R.color.warm_muted))
+                setOnCheckedChangeListener { _, checked ->
+                    smriti.skillPrefs.setEnabled(skill.id, checked)
+                }
+            }
+            binding.containerSkills.addView(row)
+        }
+    }
+
     private fun observeDownloads() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -216,28 +245,41 @@ class LocalModelActivity : SmritiScreenActivity() {
                     applyDownloadState(state)
                     when (state) {
                         is DownloadState.Succeeded -> {
-                            smriti.llmPrefs.enabled = true
-                            binding.switchUseLocal.isChecked = true
-                            val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
-                            val installed = smriti.modelStore.isPresent(state.fileName) ||
-                                smriti.modelStore.findInstalled() != null
-                            Toast.makeText(
-                                this@LocalModelActivity,
-                                when {
-                                    smriti.isLocalLlmReady() ->
-                                        "Installed and ready: ${state.fileName}"
-                                    installed ->
-                                        "Installed ${state.fileName}. Tap Reload if Ask still uses rules."
-                                    else ->
-                                        "Downloaded ${state.fileName} — ${status.message}"
-                                },
-                                Toast.LENGTH_LONG
-                            ).show()
-                            smriti.modelDownloader.consumeTerminal()
-                            refreshUi(reloadModel = false)
+                            val entry = LocalModelCatalog.downloadable.find { it.id == state.entryId }
+                            if (entry?.isSpeech == true) {
+                                Toast.makeText(
+                                    this@LocalModelActivity,
+                                    "Installed Whisper: ${state.fileName}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                smriti.modelDownloader.consumeTerminal()
+                                refreshSpeechStatus()
+                                refreshUi(reloadModel = false)
+                            } else {
+                                smriti.llmPrefs.enabled = true
+                                binding.switchUseLocal.isChecked = true
+                                val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
+                                val installed = smriti.modelStore.isPresent(state.fileName) ||
+                                    smriti.modelStore.findInstalled() != null
+                                Toast.makeText(
+                                    this@LocalModelActivity,
+                                    when {
+                                        smriti.isLocalLlmReady() ->
+                                            "Installed and ready: ${state.fileName}"
+                                        installed ->
+                                            "Installed ${state.fileName}. Tap Reload if Ask still uses rules."
+                                        else ->
+                                            "Downloaded ${state.fileName} — ${status.message}"
+                                    },
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                smriti.modelDownloader.consumeTerminal()
+                                refreshUi(reloadModel = false)
+                            }
                         }
                         is DownloadState.Failed -> {
-                            if (state.needsToken) promptForToken(state.message)
+                            val retry = LocalModelCatalog.downloadable.find { it.id == state.entryId }
+                            if (state.needsToken) promptForToken(state.message, retry)
                             else Toast.makeText(this@LocalModelActivity, state.message, Toast.LENGTH_LONG).show()
                             smriti.modelDownloader.consumeTerminal()
                             applyDownloadState(smriti.modelDownloader.state.value)
@@ -250,6 +292,11 @@ class LocalModelActivity : SmritiScreenActivity() {
     }
 
     private fun requestDownload(entry: LocalModelCatalog.Entry) {
+        persistTokenFromField()
+        if (entry.requiresAccessToken && !smriti.llmPrefs.hasHfAccessToken()) {
+            promptForToken(getString(R.string.local_model_need_token), entry)
+            return
+        }
         if (smriti.modelStore.isPresent(entry.fileName)) {
             MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.local_model_replace_title)
@@ -267,13 +314,19 @@ class LocalModelActivity : SmritiScreenActivity() {
     }
 
     private fun startDownload(entry: LocalModelCatalog.Entry) {
-        val typed = binding.inputHfToken.text?.toString()
-        if (!typed.isNullOrBlank()) {
-            smriti.llmPrefs.hfAccessToken = typed
-            binding.inputHfToken.text = null
-            refreshTokenHint()
+        persistTokenFromField()
+        if (entry.requiresAccessToken && !smriti.llmPrefs.hasHfAccessToken()) {
+            promptForToken(getString(R.string.local_model_need_token), entry)
+            return
         }
-        smriti.modelDownloader.start(entry, smriti.llmPrefs.hfAccessToken)
+        val error = smriti.modelDownloader.start(entry, smriti.llmPrefs.hfAccessToken)
+        if (error != null) {
+            if (error.contains("token", ignoreCase = true)) {
+                promptForToken(error, entry)
+            } else {
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+            }
+        }
         applyDownloadState(smriti.modelDownloader.state.value)
     }
 
@@ -292,6 +345,13 @@ class LocalModelActivity : SmritiScreenActivity() {
                     append(" · ")
                 }
                 append(String.format(Locale.US, "~%.1f GB RAM", entry.approxRamGb))
+                append(
+                    when (entry.runtime) {
+                        LocalModelCatalog.RuntimeKind.LITERT_LM -> " · LiteRT-LM"
+                        LocalModelCatalog.RuntimeKind.SPEECH -> " · Whisper speech"
+                        else -> " · MediaPipe"
+                    }
+                )
                 if (entry.requiresAccessToken) append(" · Hugging Face token")
             }
             card.progressDownload.visibility = if (running) View.VISIBLE else View.GONE
@@ -323,43 +383,89 @@ class LocalModelActivity : SmritiScreenActivity() {
         }
     }
 
-    private fun saveTokenFromField() {
-        val typed = binding.inputHfToken.text?.toString()?.trim().orEmpty()
-        if (typed.isEmpty()) {
-            if (smriti.llmPrefs.hasHfAccessToken()) {
-                smriti.llmPrefs.hfAccessToken = ""
-                Toast.makeText(this, R.string.local_model_token_cleared, Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, R.string.local_model_token_empty, Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            smriti.llmPrefs.hfAccessToken = typed
-            binding.inputHfToken.text = null
-            Toast.makeText(this, R.string.local_model_token_saved, Toast.LENGTH_SHORT).show()
-        }
+    private fun persistTokenFromField(): Boolean {
+        val extracted = LocalModelDownloadPolicy.extractHfToken(binding.inputHfToken.text?.toString())
+            ?: return smriti.llmPrefs.hasHfAccessToken()
+        smriti.llmPrefs.hfAccessToken = extracted
+        binding.inputHfToken.setText("")
         refreshTokenHint()
+        return true
+    }
+
+    private fun saveTokenFromField() {
+        val extracted = LocalModelDownloadPolicy.extractHfToken(binding.inputHfToken.text?.toString())
+        if (extracted.isNullOrBlank()) {
+            val msg = if (smriti.llmPrefs.hasHfAccessToken()) {
+                R.string.local_model_token_already
+            } else {
+                R.string.local_model_token_empty
+            }
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+            refreshTokenHint()
+            return
+        }
+        smriti.llmPrefs.hfAccessToken = extracted
+        binding.inputHfToken.setText("")
+        refreshTokenHint()
+        Toast.makeText(
+            this,
+            getString(R.string.local_model_token_status_saved, smriti.llmPrefs.maskedToken()),
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    private fun clearSavedToken() {
+        smriti.llmPrefs.clearHfAccessToken()
+        binding.inputHfToken.setText("")
+        refreshTokenHint()
+        Toast.makeText(this, R.string.local_model_token_cleared, Toast.LENGTH_SHORT).show()
     }
 
     private fun refreshTokenHint() {
-        binding.inputHfTokenLayout.hint = if (smriti.llmPrefs.hasHfAccessToken()) {
-            getString(R.string.local_model_token_saved)
+        binding.inputHfTokenLayout.hint = getString(R.string.local_model_hf_token_hint)
+        binding.textTokenStatus.text = if (smriti.llmPrefs.hasHfAccessToken()) {
+            getString(R.string.local_model_token_status_saved, smriti.llmPrefs.maskedToken())
         } else {
-            getString(R.string.local_model_hf_token_hint)
+            getString(R.string.local_model_token_status_none)
         }
     }
 
-    private fun promptForToken(message: String) {
+    private fun promptForToken(message: String, retry: LocalModelCatalog.Entry? = null) {
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val input = android.widget.EditText(this).apply {
+            hint = "hf_..."
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+            setPadding(pad, pad, pad, pad)
+            setText(binding.inputHfToken.text)
+        }
         binding.inputHfTokenLayout.requestFocus()
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.local_model_hf_token_hint)
             .setMessage(message)
-            .setPositiveButton(R.string.local_model_get_token) { _, _ ->
+            .setView(input)
+            .setPositiveButton(R.string.local_model_save_token) { _, _ ->
+                val extracted = LocalModelDownloadPolicy.extractHfToken(input.text?.toString())
+                if (extracted.isNullOrBlank()) {
+                    Toast.makeText(this, R.string.local_model_token_empty, Toast.LENGTH_LONG).show()
+                    return@setPositiveButton
+                }
+                smriti.llmPrefs.hfAccessToken = extracted
+                binding.inputHfToken.setText("")
+                refreshTokenHint()
+                Toast.makeText(
+                    this,
+                    getString(R.string.local_model_token_status_saved, smriti.llmPrefs.maskedToken()),
+                    Toast.LENGTH_LONG
+                ).show()
+                if (retry != null) startDownload(retry)
+            }
+            .setNeutralButton(R.string.local_model_get_token) { _, _ ->
                 openUrl(LocalModelCatalog.HF_TOKEN_URL)
             }
-            .setNeutralButton(R.string.local_model_accept_license) { _, _ ->
+            .setNegativeButton(R.string.local_model_accept_license) { _, _ ->
                 openUrl(LocalModelCatalog.gemma3_1b.licenseUrl ?: LocalModelCatalog.HF_TOKEN_URL)
             }
-            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
@@ -499,10 +605,175 @@ class LocalModelActivity : SmritiScreenActivity() {
             append("Path: ${status.path ?: smriti.modelStore.rootDir().absolutePath}")
             append("\nSize: $sizeMb")
             append("\nRephrase: ${if (smriti.llmPrefs.enabled && smriti.isLocalLlmReady()) "ON" else "OFF (rules only)"}")
+            append("\n\nScreen OCR: ML Kit on-device; optional Gemma 4 vision via Ollama (gemma4:e4b).")
+            append(" Toggle “Use Gemma 4 for OCR” below after pulling the model on your PC.")
             append("\n\nRecommended for iQOO 15 (12 GB): ${rec.displayName}")
             append("\nFile name: ${rec.fileName}")
         }
         refreshTokenHint()
+        refreshSpeechStatus()
         applyDownloadState(smriti.modelDownloader.state.value)
+    }
+
+    private fun bindOllamaControls() {
+        val prefs = smriti.ollamaPrefs
+        // Prefer Qwen (same family as on-device Ask) if still on the old default.
+        if (prefs.model == "llama3.2" && !prefs.enabled) {
+            prefs.model = OllamaPreferences.DEFAULT_MODEL
+        }
+        binding.switchOllamaTranslate.isChecked = prefs.enabled
+        binding.switchGemmaOcr.isChecked = prefs.ocrEnabled
+        binding.inputOllamaUrl.setText(prefs.baseUrl)
+        binding.inputOllamaModel.setText(prefs.model)
+        inflateOllamaModelChips(prefs.model)
+        inflateGemmaOcrChips(prefs.ocrModel)
+        binding.switchOllamaTranslate.setOnCheckedChangeListener { _, checked ->
+            prefs.enabled = checked
+            refreshSpeechStatus()
+        }
+        binding.switchGemmaOcr.setOnCheckedChangeListener { _, checked ->
+            prefs.ocrEnabled = checked
+            if (checked && prefs.ocrModel.isBlank()) {
+                prefs.ocrModel = OllamaPreferences.DEFAULT_OCR_MODEL
+            }
+            refreshSpeechStatus()
+            Toast.makeText(
+                this,
+                if (checked) {
+                    "Gemma 4 OCR ON — pull ${prefs.ocrModel} on the PC"
+                } else {
+                    "Gemma OCR off — using ML Kit only"
+                },
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        binding.btnSaveOllama.setOnClickListener {
+            prefs.baseUrl = binding.inputOllamaUrl.text?.toString().orEmpty()
+            prefs.model = binding.inputOllamaModel.text?.toString().orEmpty()
+                .ifBlank { OllamaPreferences.DEFAULT_MODEL }
+            prefs.ocrEnabled = binding.switchGemmaOcr.isChecked
+            binding.inputOllamaUrl.setText(prefs.baseUrl)
+            binding.inputOllamaModel.setText(prefs.model)
+            inflateOllamaModelChips(prefs.model)
+            inflateGemmaOcrChips(prefs.ocrModel)
+            Toast.makeText(this, R.string.ollama_saved, Toast.LENGTH_SHORT).show()
+            refreshSpeechStatus()
+        }
+        binding.btnTestOllama.setOnClickListener {
+            prefs.baseUrl = binding.inputOllamaUrl.text?.toString().orEmpty()
+            prefs.model = binding.inputOllamaModel.text?.toString().orEmpty()
+                .ifBlank { OllamaPreferences.DEFAULT_MODEL }
+            binding.inputOllamaModel.setText(prefs.model)
+            binding.textOllamaStatus.text = "Testing Ollama…"
+            lifecycleScope.launch {
+                val result = withContext(Dispatchers.IO) { smriti.ollamaClient.ping() }
+                binding.textOllamaStatus.text = result.getOrElse {
+                    getString(R.string.ollama_unreachable) + "\n${it.message ?: ""}"
+                }
+                Toast.makeText(
+                    this@LocalModelActivity,
+                    if (result.isSuccess) result.getOrNull() else getString(R.string.ollama_unreachable),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+        refreshSpeechStatus()
+    }
+
+    private fun bindScreenMindControls() {
+        val prefs = com.aquascope.smriti.brain.screenmind.ScreenMindPreferences(this)
+        binding.switchScreenMind.isChecked = prefs.enabled
+        binding.switchScreenMindPc.isChecked = prefs.pcEnabled
+        binding.inputScreenMindPcUrl.setText(prefs.pcBaseUrl)
+        binding.switchScreenMind.setOnCheckedChangeListener { _, checked ->
+            prefs.enabled = checked
+            Toast.makeText(
+                this,
+                if (checked) "ScreenMind ON for Neural Core Capture / Mind" else "ScreenMind OFF",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        binding.switchScreenMindPc.setOnCheckedChangeListener { _, checked ->
+            prefs.pcEnabled = checked
+            prefs.pcBaseUrl = binding.inputScreenMindPcUrl.text?.toString().orEmpty()
+            binding.inputScreenMindPcUrl.setText(prefs.pcBaseUrl)
+            Toast.makeText(
+                this,
+                if (checked) "PC ScreenMind ON · ${prefs.pcBaseUrl}" else "PC ScreenMind OFF",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        binding.inputScreenMindPcUrl.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                prefs.pcBaseUrl = binding.inputScreenMindPcUrl.text?.toString().orEmpty()
+                binding.inputScreenMindPcUrl.setText(prefs.pcBaseUrl)
+            }
+        }
+    }
+
+    private fun inflateOllamaModelChips(selectedTag: String) {
+        val group = binding.chipOllamaModels
+        group.removeAllViews()
+        OllamaPreferences.suggestedModels.forEach { sug ->
+            val chip = Chip(this).apply {
+                text = if (sug.matchesOnDeviceAsk) "${sug.label} · Ask" else sug.label
+                isCheckable = true
+                isChecked = sug.ollamaTag.equals(selectedTag, ignoreCase = true)
+                setOnClickListener {
+                    binding.inputOllamaModel.setText(sug.ollamaTag)
+                    smriti.ollamaPrefs.model = sug.ollamaTag
+                    inflateOllamaModelChips(sug.ollamaTag)
+                    refreshSpeechStatus()
+                    Toast.makeText(
+                        this@LocalModelActivity,
+                        "Ollama translate → ${sug.ollamaTag}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            group.addView(chip)
+        }
+    }
+
+    private fun inflateGemmaOcrChips(selectedTag: String) {
+        val group = binding.chipGemmaOcrModels
+        group.removeAllViews()
+        OllamaPreferences.suggestedOcrModels.forEach { sug ->
+            val chip = Chip(this).apply {
+                text = sug.label
+                isCheckable = true
+                isChecked = sug.ollamaTag.equals(selectedTag, ignoreCase = true)
+                setOnClickListener {
+                    smriti.ollamaPrefs.ocrModel = sug.ollamaTag
+                    smriti.ollamaPrefs.ocrEnabled = true
+                    binding.switchGemmaOcr.isChecked = true
+                    inflateGemmaOcrChips(sug.ollamaTag)
+                    refreshSpeechStatus()
+                    Toast.makeText(
+                        this@LocalModelActivity,
+                        "OCR model → ${sug.ollamaTag}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            group.addView(chip)
+        }
+    }
+
+    private fun refreshSpeechStatus() {
+        val whisper = smriti.modelStore.whisperStatus()
+        val prefs = smriti.ollamaPrefs
+        binding.textWhisperStatus.text = whisper.message
+        binding.textOllamaStatus.text = buildString {
+            append(if (prefs.enabled) "Translate: ON" else "Translate: OFF")
+            append(" · ")
+            append(prefs.model)
+            append("\n")
+            append(if (prefs.ocrEnabled) "Gemma OCR: ON" else "Gemma OCR: OFF (ML Kit)")
+            append(" · ")
+            append(prefs.ocrModel)
+            append("\n")
+            append(prefs.baseUrl)
+        }
     }
 }

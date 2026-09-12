@@ -32,6 +32,10 @@ data class AcousticFeatures(
 
 object FeatureExtractor {
 
+    /** Contact / wall sensing is unreliable outside this analysis band. */
+    private const val BAND_MIN_HZ = 200.0
+    private const val BAND_MAX_HZ = 8000.0
+
     /**
      * Full feature extraction pipeline.
      * @param impulseResponse time-domain impulse response from deconvolution
@@ -45,26 +49,49 @@ object FeatureExtractor {
 
         val mag = FFT.magnitude(re, im)
         val halfN = n / 2
+        val (lo, hi) = analysisBins(halfN, sampleRate)
 
         val resonance = findResonancePeak(mag, halfN, sampleRate)
         val decay = estimateDecayTime(impulseResponse, sampleRate)
-        val centroid = spectralCentroid(mag, halfN, sampleRate)
-        val spread = spectralSpread(mag, halfN, sampleRate, centroid)
-        val flatness = spectralFlatness(mag, halfN)
+        val centroid = spectralCentroidBand(mag, lo, hi, halfN, sampleRate)
+        val spread = spectralSpreadBand(mag, lo, hi, halfN, sampleRate, centroid)
+        val flatness = spectralFlatnessBand(mag, lo, hi)
 
         return AcousticFeatures(resonance, decay, centroid, spread, flatness)
     }
 
-    /** Find the frequency of the dominant peak in the magnitude spectrum. */
+    private fun analysisBins(halfN: Int, sampleRate: Int): Pair<Int, Int> {
+        val maxHz = min(BAND_MAX_HZ, sampleRate / 2.0 * 0.9)
+        val minBin = (BAND_MIN_HZ * halfN * 2 / sampleRate).toInt().coerceAtLeast(1)
+        val maxBin = (maxHz * halfN * 2 / sampleRate).toInt().coerceIn(minBin + 1, halfN - 1)
+        return minBin to maxBin
+    }
+
+    /**
+     * Dominant peak inside the contact analysis band (not full Nyquist).
+     * Full-band max often jumps to HF mic noise and forces ~99% anomaly scores.
+     */
     fun findResonancePeak(mag: DoubleArray, halfN: Int, sampleRate: Int): Double {
-        // Skip DC and very low bins (below ~50 Hz) which are often noise
-        val minBin = (50.0 * halfN * 2 / sampleRate).toInt().coerceAtLeast(1)
+        val (minBin, maxBin) = analysisBins(halfN, sampleRate)
         var peakBin = minBin
         var peakVal = mag[minBin]
-        for (i in minBin + 1 until halfN) {
+        for (i in minBin + 1..maxBin) {
             if (mag[i] > peakVal) {
                 peakVal = mag[i]
                 peakBin = i
+            }
+        }
+        // Parabolic interpolation for sub-bin stability between scans
+        if (peakBin in (minBin + 1) until maxBin) {
+            val y0 = mag[peakBin - 1]
+            val y1 = mag[peakBin]
+            val y2 = mag[peakBin + 1]
+            val denom = (y0 - 2 * y1 + y2)
+            if (abs(denom) > 1e-18) {
+                val delta = 0.5 * (y0 - y2) / denom
+                if (delta in -0.5..0.5) {
+                    return (peakBin + delta) * sampleRate / (halfN * 2.0)
+                }
             }
         }
         return peakBin.toDouble() * sampleRate / (halfN * 2)
@@ -103,24 +130,49 @@ object FeatureExtractor {
         return t60Samples / sampleRate * 1000.0 // ms
     }
 
-    /** Spectral centroid: weighted mean frequency. */
+    /** Spectral centroid over the contact analysis band (public API keeps halfN signature). */
     fun spectralCentroid(mag: DoubleArray, halfN: Int, sampleRate: Int): Double {
+        val (lo, hi) = analysisBins(halfN, sampleRate)
+        return spectralCentroidBand(mag, lo, hi, halfN, sampleRate)
+    }
+
+    private fun spectralCentroidBand(
+        mag: DoubleArray,
+        lo: Int,
+        hi: Int,
+        halfN: Int,
+        sampleRate: Int
+    ): Double {
         var weightedSum = 0.0
         var totalWeight = 0.0
-        for (i in 1 until halfN) {
-            val freq = i.toDouble() * sampleRate / (halfN * 2)
+        val n = halfN * 2
+        for (i in lo..hi) {
+            val freq = i.toDouble() * sampleRate / n
             weightedSum += freq * mag[i]
             totalWeight += mag[i]
         }
         return if (totalWeight > 0) weightedSum / totalWeight else 0.0
     }
 
-    /** Spectral spread (standard deviation around centroid). */
+    /** Spectral spread around centroid over the analysis band. */
     fun spectralSpread(mag: DoubleArray, halfN: Int, sampleRate: Int, centroid: Double): Double {
+        val (lo, hi) = analysisBins(halfN, sampleRate)
+        return spectralSpreadBand(mag, lo, hi, halfN, sampleRate, centroid)
+    }
+
+    private fun spectralSpreadBand(
+        mag: DoubleArray,
+        lo: Int,
+        hi: Int,
+        halfN: Int,
+        sampleRate: Int,
+        centroid: Double
+    ): Double {
         var weightedSqSum = 0.0
         var totalWeight = 0.0
-        for (i in 1 until halfN) {
-            val freq = i.toDouble() * sampleRate / (halfN * 2)
+        val n = halfN * 2
+        for (i in lo..hi) {
+            val freq = i.toDouble() * sampleRate / n
             val diff = freq - centroid
             weightedSqSum += diff * diff * mag[i]
             totalWeight += mag[i]
@@ -128,12 +180,18 @@ object FeatureExtractor {
         return if (totalWeight > 0) sqrt(weightedSqSum / totalWeight) else 0.0
     }
 
-    /** Spectral flatness: geometric mean / arithmetic mean of magnitudes. Measures tonality. */
+    /** Spectral flatness over the analysis band. */
     fun spectralFlatness(mag: DoubleArray, halfN: Int): Double {
+        // halfN alone does not encode sampleRate; use default phone rate for bin limits.
+        val (lo, hi) = analysisBins(halfN, 44_100)
+        return spectralFlatnessBand(mag, lo, hi)
+    }
+
+    private fun spectralFlatnessBand(mag: DoubleArray, lo: Int, hi: Int): Double {
         var logSum = 0.0
         var linSum = 0.0
         var count = 0
-        for (i in 1 until halfN) {
+        for (i in lo..hi) {
             if (mag[i] > 1e-12) {
                 logSum += ln(mag[i])
                 linSum += mag[i]

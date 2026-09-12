@@ -1,5 +1,7 @@
 package com.aquascope.smriti.engine
 
+import com.aquascope.smriti.brain.NeuralCoreSession
+import com.aquascope.smriti.llm.AskAnswerCleaner
 import com.aquascope.smriti.model.EvidenceState
 import com.aquascope.smriti.model.EventType
 import com.aquascope.smriti.model.MemoryQuery
@@ -145,7 +147,8 @@ class ReasoningEngine(
             return none("I don't have records of activity today yet.")
         }
         val lines = events.take(6).joinToString("\n") {
-            "• ${fmt.format(Date(it.timestampMs))} — ${it.locationLabel}: ${it.eventType} (${it.anomalyScore.toInt()}%)"
+            "• ${fmt.format(Date(it.timestampMs))} at ${it.locationLabel}: " +
+                AskAnswerCleaner.userFacingSummary(it.summary)
         }
         return SmritiAnswer(
             text = "Observed today (${events.size} memories):\n$lines",
@@ -185,7 +188,7 @@ class ReasoningEngine(
             ?: return none("No records available to show as evidence.")
         val bundle = evidenceEngine.forEvent(focus)
         return SmritiAnswer(
-            text = "${bundle.claim}\n\nEvidence state: ${bundle.evidenceState}.",
+            text = AskAnswerCleaner.userFacingSummary(bundle.claim),
             evidenceState = bundle.evidenceState,
             relatedEvents = listOf(focus),
             evidence = bundle,
@@ -216,26 +219,118 @@ class ReasoningEngine(
 
     private fun answerGeneral(query: MemoryQuery, events: List<PhysicalEvent>): SmritiAnswer {
         val q = query.raw.lowercase(Locale.getDefault())
+        val guardianQ = q.contains("guardian") || q.contains("ir") || q.contains("blaster") ||
+            q.contains("kitchen alert") || q.contains("smoke") || q.contains("glass break")
+        val screenQ = query.locationHint == "screen" ||
+            q.contains("screen") || q.contains("clip") || q.contains("recording") ||
+            q.contains("on screen") || q.contains("ocr") ||
+            q.contains("what game") || q.contains("which game") ||
+            (q.contains("game") && (q.contains("open") || q.contains("play"))) ||
+            (q.contains("app") && q.contains("open"))
         if (events.isEmpty()) {
             return none(
-                "I don't have a record matching “${query.raw.trim()}” yet. " +
-                    "Run a scan or ask about a location I already remember."
+                when {
+                    guardianQ ->
+                        "I don't have Guardian / IR memories yet. Turn on Guardian in Neural Core, " +
+                            "optionally arm IR, and leave the phone listening."
+                    screenQ ->
+                        "I don't have a screen clip in memory yet. Tap Capture, open the game, " +
+                            "tap Clip (or Stop), then ask again."
+                    else ->
+                        "I don't have a record matching “${query.raw.trim()}” yet. " +
+                            "Run a scan or ask about a location I already remember."
+                }
             )
         }
-        val preview = events.take(6).joinToString("\n") {
-            "• ${fmt.format(Date(it.timestampMs))} — ${it.locationLabel}: ${it.summary}"
+        // Prefer ScreenMind / game lines when asking what game/app was opened.
+        val gameFocused = q.contains("game") || (q.contains("app") && q.contains("open"))
+        val latestOcr = NeuralCoreSession.lastScreenOcr.trim()
+        val pinToLatestClip = (screenQ || gameFocused || latestOcr.isNotBlank()) &&
+            (latestOcr.isNotBlank() || events.any {
+                it.id == "screen-ocr-latest" ||
+                    it.source.equals("SCREENMIND", true) ||
+                    it.source.equals("SMRITI_PLAY", true) ||
+                    it.source.equals("OCR", true)
+            })
+        val ordered = when {
+            pinToLatestClip -> {
+                val screenOnly = events.filter {
+                    it.id == "screen-ocr-latest" ||
+                        it.source.equals("SCREENMIND", true) ||
+                        it.source.equals("SMRITI_PLAY", true) ||
+                        it.source.equals("OCR", true) ||
+                        it.summary.contains("Game/App opened", true) ||
+                        it.summary.contains("Seen on screen", true) ||
+                        it.summary.contains("Latest ScreenMind", true)
+                }.ifEmpty { events }
+                screenOnly.sortedByDescending { e ->
+                    val s = e.summary.lowercase(Locale.getDefault())
+                    val recency = e.timestampMs / 1_000_000_000L
+                    val rank = when {
+                        e.id == "screen-ocr-latest" -> 5
+                        s.contains("latest screenmind") -> 4
+                        s.contains("game/app opened") -> 3
+                        s.contains("category: gaming") || s.contains("gaming") -> 2
+                        e.source.equals("SCREENMIND", true) -> 1
+                        else -> 0
+                    }
+                    rank * 10_000L + recency
+                }
+            }
+            gameFocused -> {
+                events.sortedByDescending { e ->
+                    val s = e.summary.lowercase(Locale.getDefault())
+                    when {
+                        s.contains("game/app opened") -> 3
+                        s.contains("category: gaming") || s.contains("gaming") -> 2
+                        e.source.equals("SCREENMIND", true) -> 1
+                        else -> 0
+                    }
+                }
+            }
+            else -> events
+        }
+        // One clip = one answer. Mixing 6 unrelated memories made Ask irrelevant.
+        val focus = if (pinToLatestClip) ordered.take(1) else ordered.take(6)
+        val preview = when {
+            pinToLatestClip && latestOcr.isNotBlank() ->
+                AskAnswerCleaner.userFacingSummary(latestOcr).take(1_500)
+            else -> focus.joinToString("\n") {
+                "• ${fmt.format(Date(it.timestampMs))} at ${it.locationLabel}: " +
+                    AskAnswerCleaner.userFacingSummary(it.summary)
+            }
         }
         val prefix = when {
-            q.contains("guardian") || q.contains("ir") || q.contains("blaster") ->
-                "From Guardian / IR records: "
+            guardianQ ->
+                "Guardian listens for ambient sounds and can request an IR pulse when evidence supports it. " +
+                    "Here is what memory has:\n"
+            pinToLatestClip && latestOcr.isNotBlank() ->
+                "From your latest screen clip:\n"
+            gameFocused ->
+                "From your recent ScreenMind clip, here is what memory has about apps/games:\n"
+            screenQ ->
+                "From your recent screen recording / ScreenMind, here is what memory has:\n"
             else -> "About “${query.raw.trim()}”, here is what memory has (${events.size} related):\n"
         }
+        val actions = when {
+            guardianQ -> listOf(
+                "Ask: what did Guardian hear?",
+                "Arm IR on Neural Core if you want appliance toggles",
+                "Ask: did IR fire?"
+            )
+            screenQ || gameFocused -> listOf(
+                "Ask: what game did I open?",
+                "Ask: what was on my screen?",
+                "Capture → Clip again if the game name is missing"
+            )
+            else -> listOf("Ask: Has this happened before?", "Ask: Is it definitely a leak?")
+        }
         return SmritiAnswer(
-            text = prefix + if (prefix.startsWith("From")) "\n$preview" else preview,
+            text = prefix + preview,
             evidenceState = EvidenceState.OBSERVED,
-            relatedEvents = events.take(6),
-            evidence = evidenceEngine.forEvents(events.take(6), "Retrieved memories", EvidenceState.OBSERVED),
-            suggestedActions = listOf("Ask: Has this happened before?", "Ask: Is it definitely a leak?")
+            relatedEvents = focus,
+            evidence = evidenceEngine.forEvents(focus, "Retrieved memories", EvidenceState.OBSERVED),
+            suggestedActions = actions
         )
     }
 

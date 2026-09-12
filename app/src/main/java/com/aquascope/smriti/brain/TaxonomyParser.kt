@@ -22,13 +22,14 @@ object TaxonomyParser {
             return Parsed(Kind.UNKNOWN, "Empty input", emptyMap())
         }
         val lower = text.lowercase()
+        val title = extractTitle(text)
         return when {
             matches(lower, GAME) ->
-                Parsed(Kind.GAME, firstLine(text), fields(text, "event" to text))
+                Parsed(Kind.GAME, title, fields(text, "event" to text))
             matches(lower, HEALTH) ->
                 Parsed(
                     Kind.HEALTH,
-                    firstLine(text),
+                    title,
                     fields(
                         text,
                         "medicine" to capture(lower, Regex("""(mg|ml|tablet|capsule|dose|insulin|paracetamol|ibuprofen)""")),
@@ -38,7 +39,7 @@ object TaxonomyParser {
             matches(lower, MONEY) ->
                 Parsed(
                     Kind.MONEY,
-                    firstLine(text),
+                    title,
                     fields(
                         text,
                         "amount" to capture(text, Regex("""(?:₹|rs\.?|inr|usd|\$)\s*[\d,]+(?:\.\d{2})?""", RegexOption.IGNORE_CASE)),
@@ -48,13 +49,13 @@ object TaxonomyParser {
             matches(lower, ACCESS) ->
                 Parsed(
                     Kind.ACCESS,
-                    firstLine(text),
+                    title,
                     fields(text, "secret_kind" to "local_code", "note" to text)
                 )
             matches(lower, TOOLS) ->
                 Parsed(
                     Kind.TOOLS,
-                    firstLine(text),
+                    title,
                     fields(
                         text,
                         "url" to capture(text, Regex("""https?://\S+|www\.\S+""", RegexOption.IGNORE_CASE)),
@@ -64,18 +65,21 @@ object TaxonomyParser {
             matches(lower, PLACES) || matches(lower, LOCATION) ->
                 Parsed(
                     Kind.LOCATION,
-                    firstLine(text),
+                    title,
                     fields(text, "place" to text)
                 )
             matches(lower, PEOPLE) ->
-                Parsed(Kind.PEOPLE, firstLine(text), fields(text, "conversation" to text))
+                Parsed(Kind.PEOPLE, title, fields(text, "conversation" to text))
             matches(lower, ACOUSTIC) ->
-                Parsed(Kind.ACOUSTIC, firstLine(text), fields(text, "signal" to text))
-            else -> Parsed(Kind.UNKNOWN, firstLine(text), fields(text, "raw" to text))
+                Parsed(Kind.ACOUSTIC, title, fields(text, "signal" to text))
+            else -> Parsed(Kind.UNKNOWN, title, fields(text, "raw" to text))
         }
     }
 
-    private val GAME = listOf("kill", "knock", "victory", "winner winner", "bgmi", "death cam", "clutch", "clip", "recording")
+    private val GAME = listOf(
+        "kill", "knock", "victory", "winner winner", "bgmi", "death cam", "clutch",
+        "clip", "recording", "peace", "highlight", "gaming", "kill feed", "screenmind"
+    )
     private val HEALTH = listOf("mg", "tablet", "capsule", "dose", "medicine", "insulin", "medication", "pill")
     private val MONEY = listOf("invoice", "due", "payment", "₹", "rs.", "total", "amount")
     private val ACCESS = listOf("wifi", "wi-fi", "password", "gate code", "otp", "pin ")
@@ -90,6 +94,31 @@ object TaxonomyParser {
 
     private fun firstLine(text: String): String =
         text.lineSequence().firstOrNull { it.isNotBlank() }?.take(80) ?: "Memory"
+
+    /** Prefer an explicit Title: / Summary: line so PEACE clips show a real headline in MEMORY. */
+    private fun extractTitle(text: String): String {
+        for (line in text.lineSequence()) {
+            val t = line.trim()
+            if (t.isBlank()) continue
+            val titled = Regex("""(?i)^(?:title|summary)\s*:\s*(.+)$""").find(t)?.groupValues?.getOrNull(1)
+            if (!titled.isNullOrBlank()) return titled.take(100)
+        }
+        val first = firstLine(text)
+        // Skip generic PEACE banners as the card title.
+        if (first.startsWith("PEACE", true) || first.equals("highlight clip", true)) {
+            val better = text.lineSequence()
+                .map { it.trim() }
+                .firstOrNull {
+                    it.isNotBlank() &&
+                        !it.startsWith("PEACE", true) &&
+                        !it.startsWith("Category:", true) &&
+                        !it.startsWith("File:", true) &&
+                        !it.startsWith("Tags:", true)
+                }
+            if (!better.isNullOrBlank()) return better.take(100)
+        }
+        return first
+    }
 
     private fun capture(text: String, regex: Regex): String =
         regex.find(text)?.value.orEmpty()
