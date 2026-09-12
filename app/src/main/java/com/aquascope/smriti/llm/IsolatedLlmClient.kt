@@ -23,6 +23,7 @@ class IsolatedLlmClient(context: Context) : LocalLlmEngine {
 
     private val app = context.applicationContext
     private val gate = Any()
+    private val callLock = Any()
     private val replies = HandlerThread("smriti-llm-ipc").apply { start() }
     private val replyMessenger = Messenger(ReplyHandler(replies))
 
@@ -48,17 +49,31 @@ class IsolatedLlmClient(context: Context) : LocalLlmEngine {
     val crashedNative: Boolean
         get() = nativeUnstable
 
-    fun ensureReady(timeoutMs: Long = WARMUP_TIMEOUT_MS): Boolean {
+    fun ensureReady(timeoutMs: Long = WARMUP_TIMEOUT_MS): Boolean = synchronized(callLock) {
+        ensureReadyLocked(timeoutMs)
+    }
+
+    private fun ensureReadyLocked(timeoutMs: Long): Boolean {
         if (isReady) return true
         if (nativeUnstable) {
-            if (recoveries >= MAX_RECOVERIES) return false
+            if (recoveries >= MAX_RECOVERIES) {
+                lastError = lastError ?: "Local model process crashed. Reload from System."
+                return false
+            }
             Log.i(TAG, "retrying LLM sandbox after prior death (${recoveries + 1}/$MAX_RECOVERIES)")
             recoveries++
             nativeUnstable = false
             unbind()
         }
-        if (!bind(BIND_TIMEOUT_MS)) return false
-        val reply = transact(MSG_WARMUP, Bundle(), timeoutMs) ?: return false
+        if (!bind(BIND_TIMEOUT_MS)) {
+            lastError = lastError ?: "Could not start local model process"
+            return false
+        }
+        val reply = transact(MSG_WARMUP, Bundle(), timeoutMs)
+        if (reply == null) {
+            lastError = lastError ?: "Local model warmup timed out"
+            return false
+        }
         val ok = reply.getBoolean(KEY_OK, false)
         if (ok) {
             boundReady = true
@@ -68,36 +83,58 @@ class IsolatedLlmClient(context: Context) : LocalLlmEngine {
             Log.i(TAG, "sandbox ready: $label")
         } else {
             boundReady = false
-            lastError = reply.getString(KEY_MESSAGE)
+            lastError = reply.getString(KEY_MESSAGE) ?: "MediaPipe did not load"
             Log.w(TAG, "sandbox warmup failed: $lastError")
         }
         return ok && !nativeUnstable
     }
 
-    fun reload() {
+    fun reload() = synchronized(callLock) {
         nativeUnstable = false
         boundReady = false
         label = null
         lastError = null
         recoveries = 0
         unbind()
-        ensureReady()
+        ensureReadyLocked(WARMUP_TIMEOUT_MS)
     }
 
     fun lastFailure(): String? = lastError
 
-    override fun generate(prompt: String): String? {
-        if (!ensureReady(WARMUP_TIMEOUT_MS)) return null
+    override fun generate(prompt: String): String? = synchronized(callLock) {
+        if (!ensureReadyLocked(WARMUP_TIMEOUT_MS)) return@synchronized null
         val data = Bundle().apply { putString(KEY_PROMPT, prompt) }
-        val reply = transact(MSG_GENERATE, data, GENERATE_TIMEOUT_MS) ?: return null
-        if (!reply.getBoolean(KEY_OK, false)) {
-            lastError = reply.getString(KEY_MESSAGE)
-            return null
+        val reply = transact(MSG_GENERATE, data, GENERATE_TIMEOUT_MS)
+        if (reply == null) {
+            if (nativeUnstable && recoveries < MAX_RECOVERIES) {
+                Log.w(TAG, "generate interrupted; retrying sandbox once")
+                if (ensureReadyLocked(WARMUP_TIMEOUT_MS)) {
+                    val retry = transact(MSG_GENERATE, data, GENERATE_TIMEOUT_MS)
+                    return@synchronized readGenerate(retry)
+                }
+            }
+            lastError = lastError ?: "Local model timed out while answering"
+            return@synchronized null
         }
-        return reply.getString(KEY_TEXT)?.trim()?.takeIf { it.isNotEmpty() }
+        readGenerate(reply)
     }
 
-    override fun close() {
+    private fun readGenerate(reply: Bundle?): String? {
+        if (reply == null) return null
+        if (!reply.getBoolean(KEY_OK, false)) {
+            lastError = reply.getString(KEY_MESSAGE) ?: "empty generation"
+            return null
+        }
+        val text = reply.getString(KEY_TEXT)?.trim()?.takeIf { it.isNotEmpty() }
+        if (text == null) {
+            lastError = "Model produced no text"
+        } else {
+            lastError = null
+        }
+        return text
+    }
+
+    override fun close() = synchronized(callLock) {
         try {
             transact(MSG_CLOSE, Bundle(), 2_000)
         } catch (_: Throwable) {
@@ -139,7 +176,7 @@ class IsolatedLlmClient(context: Context) : LocalLlmEngine {
             app.bindService(
                 Intent(app, LlmSandboxService::class.java),
                 conn,
-                Context.BIND_AUTO_CREATE
+                Context.BIND_AUTO_CREATE or Context.BIND_IMPORTANT
             )
         } catch (t: Throwable) {
             Log.w(TAG, "bindService failed", t)
@@ -215,7 +252,8 @@ class IsolatedLlmClient(context: Context) : LocalLlmEngine {
 
     private inner class ReplyHandler(thread: HandlerThread) : Handler(thread.looper) {
         override fun handleMessage(msg: Message) {
-            pendingBundle.set(msg.data ?: Bundle())
+            val copy = msg.data?.let { Bundle(it) } ?: Bundle()
+            pendingBundle.set(copy)
             pendingLatch.get()?.countDown()
         }
     }
@@ -233,7 +271,7 @@ class IsolatedLlmClient(context: Context) : LocalLlmEngine {
         const val KEY_PID = "pid"
         private const val BIND_TIMEOUT_MS = 8_000L
         private const val WARMUP_TIMEOUT_MS = 120_000L // Qwen 1.5B can take a while
-        private const val GENERATE_TIMEOUT_MS = 60_000L
+        private const val GENERATE_TIMEOUT_MS = 90_000L
         private const val MAX_RECOVERIES = 2
     }
 }

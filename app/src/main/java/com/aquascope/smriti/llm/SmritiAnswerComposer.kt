@@ -33,7 +33,7 @@ class SmritiAnswerComposer(
             null
         } ?: return ruleAnswer.copy(usedLocalModel = false, modelName = null)
 
-        if (!passesGroundingCheck(polished, ruleAnswer)) {
+        if (!passesGroundingCheck(polished, ruleAnswer, intent)) {
             return ruleAnswer.copy(usedLocalModel = false, modelName = null)
         }
 
@@ -49,7 +49,11 @@ class SmritiAnswerComposer(
          * Soft guard: reject answers that assert confirmation when evidence is weaker,
          * or invent "confirmed leak" language the rules never used.
          */
-        fun passesGroundingCheck(modelText: String, ruleAnswer: SmritiAnswer): Boolean {
+        fun passesGroundingCheck(
+            modelText: String,
+            ruleAnswer: SmritiAnswer,
+            intent: QueryIntent = QueryIntent.GENERAL
+        ): Boolean {
             val t = modelText.lowercase()
             if (t.isBlank()) return false
             val rule = ruleAnswer.text.lowercase()
@@ -61,8 +65,12 @@ class SmritiAnswerComposer(
 
             if (modelClaimsConfirmedLeak && !rulesAllowConfirmed) return false
 
-            // Reject huge expansions that look like free-form hallucination
-            if (modelText.length > ruleAnswer.text.length * 5 + 280) return false
+            val maxLen = if (intent == QueryIntent.GENERAL) {
+                900
+            } else {
+                maxOf(ruleAnswer.text.length * 5 + 280, 720)
+            }
+            if (modelText.length > maxLen) return false
 
             return true
         }

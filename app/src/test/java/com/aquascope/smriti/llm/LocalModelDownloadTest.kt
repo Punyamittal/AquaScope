@@ -56,4 +56,24 @@ class LocalModelDownloadTest {
         assertEquals("512 KB", LocalModelDownloadPolicy.formatBytes(512 * 1024L))
         assertEquals("1.5 MB", LocalModelDownloadPolicy.formatBytes((1.5 * 1024 * 1024).toLong()))
     }
+
+    @Test
+    fun `recognizes gallery and mediapipe model names`() {
+        assertTrue(LocalModelStore.isModelFile("Gemma3-1B-IT.litertlm"))
+        assertTrue(LocalModelStore.isModelFile("gemma3-1b-it-int4.task"))
+        assertFalse(LocalModelStore.isLoadableMediaPipe("Gemma3-1B-IT.litertlm"))
+        assertTrue(LocalModelStore.isLoadableMediaPipe("gemma3-1b-it-int4.task"))
+        assertTrue(LocalModelStore.isPreferredTask("gemma3-1b-it-int4.task"))
+        assertFalse(LocalModelStore.isPreferredTask("model.litertlm"))
+        assertTrue(LocalModelStore.looksLikeGemmaBundle("Gemma3-1B-IT_q4_ekv1280.task"))
+        assertTrue(LocalModelStore.looksLikeGemmaBundle("gemma3-1b-it.litertlm"))
+        assertFalse(LocalModelStore.looksLikeGemmaBundle("notes.txt"))
+    }
+
+    @Test
+    fun `preferred names include gallery-exported task aliases`() {
+        val names = LocalModelCatalog.preferredFileNames()
+        assertTrue(names.contains("Gemma3-1B-IT.task"))
+        assertTrue(names.contains("Gemma3-1B-IT_q4_ekv1280.task"))
+    }
 }

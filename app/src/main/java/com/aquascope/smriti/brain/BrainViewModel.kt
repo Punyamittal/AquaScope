@@ -9,14 +9,17 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.net.Uri
 import android.speech.tts.TextToSpeech
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aquascope.halo.SmritiLightState
+import com.aquascope.smriti.SmritiCore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 enum class OrbState { IDLE, LISTENING, COMPUTING, SPEAKING, VERIFIED }
@@ -35,7 +38,7 @@ data class BrainUiState(
     val playArmed: Boolean = false,
     val irEnabled: Boolean = false,
     val query: String = "",
-    val recallMessage: String = "Ask what this device remembers.",
+    val recallMessage: String = "Ask what this phone remembers.",
     val recallFound: Boolean = false,
     val timeline: List<EpisodeRecord> = emptyList(),
     val haloHardware: Boolean = false,
@@ -112,33 +115,78 @@ class BrainViewModel(app: Application) : AndroidViewModel(app), SensorEventListe
                 it.copy(
                     recallFound = false,
                     recallMessage = "Type a question first, then tap Send.",
-                    orb = OrbState.IDLE
+                    orb = OrbState.IDLE,
+                    status = "Waiting for input"
                 )
             }
             return
         }
         viewModelScope.launch {
-            _state.update { it.copy(orb = OrbState.COMPUTING, status = "Recalling…") }
-            actuators.setHalo(SmritiLightState.MEMORY_RECALL)
-            val result = runCatching { memory.recall(q) }.getOrElse { t ->
-                RecallResult(false, "Recall failed: ${t.message ?: t.javaClass.simpleName}", emptyList())
-            }
             _state.update {
                 it.copy(
-                    recallFound = result.found,
-                    recallMessage = result.message,
-                    timeline = if (result.found) result.matches else it.timeline,
-                    orb = if (result.found) OrbState.VERIFIED else OrbState.IDLE,
-                    status = if (result.found) "Recall hit" else "No match in memory"
+                    orb = OrbState.COMPUTING,
+                    status = "Thinking…",
+                    recallMessage = "Working on: $q",
+                    recallFound = false
                 )
             }
-            if (result.found) {
-                actuators.haptic(HardwareActuatorService.HAPTIC_CONFIRM)
-                speak(result.message)
+            runCatching { actuators.setHalo(SmritiLightState.MEMORY_RECALL) }
+
+            val memResult = runCatching { memory.recall(q) }.getOrElse { t ->
+                Log.e(TAG, "brain recall failed", t)
+                RecallResult(false, "Recall failed: ${t.message ?: t.javaClass.simpleName}", emptyList())
+            }
+
+            // Same grounded Ask path as the Ask tab — so Neural Core always produces text.
+            // Only use the local LLM if already warm; never block Send on model load.
+            val smriti = SmritiCore.get(getApplication())
+            val askAnswer = runCatching {
+                withContext(Dispatchers.Default) {
+                    smriti.ask(q, allowLocalLlm = smriti.isLocalLlmReady())
+                }
+            }.onFailure { t -> Log.e(TAG, "SmritiCore.ask failed", t) }.getOrNull()
+
+            val answerText = when {
+                memResult.found -> {
+                    val askBit = askAnswer?.text?.trim().orEmpty()
+                    if (askBit.isNotEmpty() && !askBit.equals(memResult.message, ignoreCase = true)) {
+                        "${memResult.message}\n\n$askBit"
+                    } else {
+                        memResult.message
+                    }
+                }
+                !askAnswer?.text.isNullOrBlank() -> askAnswer!!.text.trim()
+                else -> "No record found yet. Tap Store note to save this, or run a Scan first."
+            }
+            val found = memResult.found ||
+                (askAnswer?.relatedEvents?.isNotEmpty() == true) ||
+                !askAnswer?.text.isNullOrBlank()
+
+            _state.update {
+                it.copy(
+                    recallFound = found,
+                    recallMessage = answerText,
+                    timeline = if (memResult.found) memResult.matches else it.timeline,
+                    orb = if (found) OrbState.VERIFIED else OrbState.IDLE,
+                    status = when {
+                        memResult.found -> "Neural memory hit"
+                        askAnswer?.usedLocalModel == true -> "Local model · ${askAnswer.modelName ?: "on-device"}"
+                        !askAnswer?.text.isNullOrBlank() -> "Grounded answer"
+                        else -> "No match in memory"
+                    }
+                )
+            }
+            if (found) {
+                runCatching { actuators.haptic(HardwareActuatorService.HAPTIC_CONFIRM) }
+                speak(answerText.take(280))
             } else {
-                actuators.setHalo(SmritiLightState.UNKNOWN)
+                runCatching { actuators.setHalo(SmritiLightState.UNKNOWN) }
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "BrainViewModel"
     }
 
     fun ingestText(raw: String, source: String = "USER") {

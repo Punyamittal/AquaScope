@@ -48,15 +48,7 @@ class LocalModelActivity : SmritiScreenActivity() {
         }
         try {
             val file = smriti.modelStore.importFromUri(this, uri)
-            lifecycleScope.launch {
-                val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
-                Toast.makeText(
-                    this@LocalModelActivity,
-                    if (status.ready) "Loaded ${file.name}" else "Imported ${file.name} but load failed",
-                    Toast.LENGTH_LONG
-                ).show()
-                refreshUi(reloadModel = false)
-            }
+            finishModelImport(file)
         } catch (t: Throwable) {
             Toast.makeText(this, t.message ?: "Import failed", Toast.LENGTH_LONG).show()
         }
@@ -127,9 +119,33 @@ class LocalModelActivity : SmritiScreenActivity() {
         binding.switchUseLocal.isChecked = smriti.llmPrefs.enabled
         binding.switchUseLocal.setOnCheckedChangeListener { _, checked ->
             smriti.llmPrefs.enabled = checked
-            refreshUi()
+            if (!checked) {
+                lifecycleScope.launch {
+                    withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
+                    bindModelStatus(smriti.modelStatusLight())
+                }
+            } else {
+                refreshUi(reloadModel = !smriti.isLocalLlmReady())
+            }
         }
         binding.btnImportModel.setOnClickListener { pickModel.launch(arrayOf("*/*")) }
+        binding.btnImportDownloads.setOnClickListener {
+            val found = runCatching { smriti.modelStore.findInPublicDownloads() }.getOrNull()
+            if (found != null) {
+                try {
+                    finishModelImport(smriti.modelStore.importFromFile(found))
+                } catch (t: Throwable) {
+                    Toast.makeText(this, t.message ?: "Import failed", Toast.LENGTH_LONG).show()
+                }
+            } else {
+                Toast.makeText(
+                    this,
+                    "Edge Gallery keeps its own copy. Pick gemma3-1b-it-int4.task from Files.",
+                    Toast.LENGTH_LONG
+                ).show()
+                pickModel.launch(arrayOf("*/*"))
+            }
+        }
         binding.btnReload.setOnClickListener {
             binding.textModelStatus.text = "Loading local model…"
             lifecycleScope.launch {
@@ -163,7 +179,7 @@ class LocalModelActivity : SmritiScreenActivity() {
 
         inflateDownloadCards()
         observeDownloads()
-        refreshUi()
+        refreshUi(reloadModel = false)
         refreshHaloStatus()
         halo.setState(SmritiLightState.NORMAL)
     }
@@ -200,6 +216,8 @@ class LocalModelActivity : SmritiScreenActivity() {
                     applyDownloadState(state)
                     when (state) {
                         is DownloadState.Succeeded -> {
+                            smriti.llmPrefs.enabled = true
+                            binding.switchUseLocal.isChecked = true
                             val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
                             Toast.makeText(
                                 this@LocalModelActivity,
@@ -393,15 +411,49 @@ class LocalModelActivity : SmritiScreenActivity() {
         step()
     }
 
-    private fun refreshUi(reloadModel: Boolean = true) {
+    private fun refreshUi(reloadModel: Boolean = false) {
         if (!reloadModel) {
             bindModelStatus(smriti.modelStatusLight())
+            if (smriti.llmPrefs.enabled &&
+                !smriti.isLocalLlmReady() &&
+                smriti.modelStore.findInstalled() != null
+            ) {
+                binding.textModelStatus.text = "Connecting local model…"
+                lifecycleScope.launch {
+                    val status = withContext(Dispatchers.Default) {
+                        smriti.ensureLocalLlm()
+                        smriti.modelStatusLight()
+                    }
+                    bindModelStatus(status)
+                }
+            }
             return
         }
         binding.textModelStatus.text = "Loading local model…"
         lifecycleScope.launch {
             val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
             bindModelStatus(status)
+        }
+    }
+
+    private fun finishModelImport(file: java.io.File) {
+        smriti.llmPrefs.enabled = true
+        binding.switchUseLocal.isChecked = true
+        binding.textModelStatus.text = "Loading ${file.name}…"
+        lifecycleScope.launch {
+            val status = withContext(Dispatchers.Default) { smriti.refreshLocalLlm() }
+            val hint = smriti.llmFailureHint()
+            val msg = when {
+                smriti.isLocalLlmReady() ->
+                    "Ready for Ask SMRITI: ${file.name}"
+                file.name.endsWith(".litertlm", ignoreCase = true) ->
+                    "Copied ${file.name}, but Edge Gallery NPU bundles will not run here. Download Gemma 3 1B (.task) on this System screen."
+                !hint.isNullOrBlank() ->
+                    "Imported ${file.name}. Load failed: $hint"
+                else -> status.message
+            }
+            Toast.makeText(this@LocalModelActivity, msg, Toast.LENGTH_LONG).show()
+            refreshUi(reloadModel = false)
         }
     }
 

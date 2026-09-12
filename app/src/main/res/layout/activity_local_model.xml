@@ -342,6 +342,14 @@
                 android:text="@string/local_model_import" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnImportDownloads"
+                style="@style/Widget.AquaScope.Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/local_model_import_downloads" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnReload"
                 style="@style/Widget.AquaScope.Button.Secondary"
                 android:layout_width="match_parent"

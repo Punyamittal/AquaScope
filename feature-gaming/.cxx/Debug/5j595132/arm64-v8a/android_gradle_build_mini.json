@@ -1,0 +1,27 @@
+{
+  "buildFiles": [
+    "C:\\Users\\punya mittal\\aquascope\\feature-gaming\\src\\main\\cpp\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\punya mittal\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "C:\\Users\\punya mittal\\aquascope\\feature-gaming\\.cxx\\Debug\\5j595132\\arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\punya mittal\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "C:\\Users\\punya mittal\\aquascope\\feature-gaming\\.cxx\\Debug\\5j595132\\arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "smriti_killfeed::@6890427a1f51a3e7e1df": {
+      "artifactName": "smriti_killfeed",
+      "abi": "arm64-v8a",
+      "output": "C:\\Users\\punya mittal\\aquascope\\feature-gaming\\build\\intermediates\\cxx\\Debug\\5j595132\\obj\\arm64-v8a\\libsmriti_killfeed.so",
+      "runtimeFiles": []
+    }
+  }
+}

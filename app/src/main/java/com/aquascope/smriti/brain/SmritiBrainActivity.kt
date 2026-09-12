@@ -85,7 +85,7 @@ class SmritiBrainActivity : SmritiScreenActivity() {
                                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
                                 )
                                 putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-                                putExtra(RecognizerIntent.EXTRA_PROMPT, "Ask Neural Core")
+                                putExtra(RecognizerIntent.EXTRA_PROMPT, "Ask SMRITI")
                             }
                             try {
                                 voice.launch(intent)

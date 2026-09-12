@@ -57,11 +57,12 @@
     <string name="local_model_token_saved">Token saved on this device</string>
     <string name="local_model_token_cleared">Token cleared</string>
     <string name="local_model_token_empty">Paste a Hugging Face token first</string>
-    <string name="local_model_import">Import .task / .bin model</string>
+    <string name="local_model_import">Import .task from Files</string>
+    <string name="local_model_import_downloads">Use Gemma file in Downloads</string>
     <string name="local_model_reload">Reload model</string>
     <string name="local_model_remove">Remove installed model</string>
     <string name="local_model_howto">Install on iQOO 15</string>
-    <string name="local_model_howto_body">1. Tap Download on Gemma 3 1B (recommended) or Qwen 2.5 1.5B.\n2. Gemma is gated: accept the license on Hugging Face, create a token, paste it, then download. Qwen does not need a token.\n3. Keep the app open until the bar finishes. A dropped download can resume.\n4. You can still Import a .task from Downloads, or adb push into files/smriti_models/.\n5. Ask SMRITI still works offline with rules if no model is installed.\n\nNever rely on the model for leak confirmation — evidence remains authoritative.</string>
+    <string name="local_model_howto_body">Edge Gallery cannot share its private copy with this app. Downloading Gemma there does not install it here.\n\n1. In this app: System → Download Gemma 3 1B (INT4 .task). That is the file Ask uses.\n2. Or export/share gemma3-1b-it-int4.task into Downloads, then tap Use Gemma file in Downloads / Import.\n3. Turn on “Use local model when available”, then open Ask SMRITI.\n4. NPU .litertlm files from Edge Gallery will not load here — use the MediaPipe .task.\n\nAsk still works with rules if no model is installed. Never rely on the model for leak confirmation.</string>
     <string name="memory_timeline">MEMORY</string>
     <string name="memory_subtitle">Everything your home has remembered.</string>
     <string name="view_memory">View memory</string>

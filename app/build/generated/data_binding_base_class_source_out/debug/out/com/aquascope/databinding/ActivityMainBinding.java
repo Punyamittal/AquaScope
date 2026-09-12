@@ -4,7 +4,6 @@ package com.aquascope.databinding;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -14,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.aquascope.R;
+import com.aquascope.ui.AcousticFieldView;
 import com.aquascope.ui.SmritiNavBar;
 import com.google.android.material.button.MaterialButton;
 import java.lang.NullPointerException;
@@ -25,10 +25,13 @@ public final class ActivityMainBinding implements ViewBinding {
   private final ConstraintLayout rootView;
 
   @NonNull
+  public final AcousticFieldView acousticFieldBg;
+
+  @NonNull
   public final SmritiNavBar bottomNav;
 
   @NonNull
-  public final View brandBand;
+  public final LinearLayout cardScanSummary;
 
   @NonNull
   public final LinearLayout emptyState;
@@ -37,44 +40,46 @@ public final class ActivityMainBinding implements ViewBinding {
   public final MaterialButton fabNewScan;
 
   @NonNull
-  public final LinearLayout headerBar;
-
-  @NonNull
-  public final View headerLine;
+  public final LinearLayout headerScan;
 
   @NonNull
   public final RecyclerView recyclerLocations;
 
   @NonNull
-  public final TextView textAppTitle;
+  public final TextView textScanBrand;
 
   @NonNull
-  public final TextView textSectionLabel;
+  public final TextView textScanLast;
 
   @NonNull
-  public final TextView textSubtitle;
+  public final TextView textScanSubtitle;
 
   @NonNull
-  public final ImageView waveDecor;
+  public final TextView textScanSummary;
 
-  private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull SmritiNavBar bottomNav,
-      @NonNull View brandBand, @NonNull LinearLayout emptyState, @NonNull MaterialButton fabNewScan,
-      @NonNull LinearLayout headerBar, @NonNull View headerLine,
-      @NonNull RecyclerView recyclerLocations, @NonNull TextView textAppTitle,
-      @NonNull TextView textSectionLabel, @NonNull TextView textSubtitle,
-      @NonNull ImageView waveDecor) {
+  @NonNull
+  public final TextView textScanTitle;
+
+  private ActivityMainBinding(@NonNull ConstraintLayout rootView,
+      @NonNull AcousticFieldView acousticFieldBg, @NonNull SmritiNavBar bottomNav,
+      @NonNull LinearLayout cardScanSummary, @NonNull LinearLayout emptyState,
+      @NonNull MaterialButton fabNewScan, @NonNull LinearLayout headerScan,
+      @NonNull RecyclerView recyclerLocations, @NonNull TextView textScanBrand,
+      @NonNull TextView textScanLast, @NonNull TextView textScanSubtitle,
+      @NonNull TextView textScanSummary, @NonNull TextView textScanTitle) {
     this.rootView = rootView;
+    this.acousticFieldBg = acousticFieldBg;
     this.bottomNav = bottomNav;
-    this.brandBand = brandBand;
+    this.cardScanSummary = cardScanSummary;
     this.emptyState = emptyState;
     this.fabNewScan = fabNewScan;
-    this.headerBar = headerBar;
-    this.headerLine = headerLine;
+    this.headerScan = headerScan;
     this.recyclerLocations = recyclerLocations;
-    this.textAppTitle = textAppTitle;
-    this.textSectionLabel = textSectionLabel;
-    this.textSubtitle = textSubtitle;
-    this.waveDecor = waveDecor;
+    this.textScanBrand = textScanBrand;
+    this.textScanLast = textScanLast;
+    this.textScanSubtitle = textScanSubtitle;
+    this.textScanSummary = textScanSummary;
+    this.textScanTitle = textScanTitle;
   }
 
   @Override
@@ -104,15 +109,21 @@ public final class ActivityMainBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
+      id = R.id.acousticFieldBg;
+      AcousticFieldView acousticFieldBg = ViewBindings.findChildViewById(rootView, id);
+      if (acousticFieldBg == null) {
+        break missingId;
+      }
+
       id = R.id.bottomNav;
       SmritiNavBar bottomNav = ViewBindings.findChildViewById(rootView, id);
       if (bottomNav == null) {
         break missingId;
       }
 
-      id = R.id.brandBand;
-      View brandBand = ViewBindings.findChildViewById(rootView, id);
-      if (brandBand == null) {
+      id = R.id.cardScanSummary;
+      LinearLayout cardScanSummary = ViewBindings.findChildViewById(rootView, id);
+      if (cardScanSummary == null) {
         break missingId;
       }
 
@@ -128,15 +139,9 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.headerBar;
-      LinearLayout headerBar = ViewBindings.findChildViewById(rootView, id);
-      if (headerBar == null) {
-        break missingId;
-      }
-
-      id = R.id.headerLine;
-      View headerLine = ViewBindings.findChildViewById(rootView, id);
-      if (headerLine == null) {
+      id = R.id.headerScan;
+      LinearLayout headerScan = ViewBindings.findChildViewById(rootView, id);
+      if (headerScan == null) {
         break missingId;
       }
 
@@ -146,33 +151,39 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.textAppTitle;
-      TextView textAppTitle = ViewBindings.findChildViewById(rootView, id);
-      if (textAppTitle == null) {
+      id = R.id.textScanBrand;
+      TextView textScanBrand = ViewBindings.findChildViewById(rootView, id);
+      if (textScanBrand == null) {
         break missingId;
       }
 
-      id = R.id.textSectionLabel;
-      TextView textSectionLabel = ViewBindings.findChildViewById(rootView, id);
-      if (textSectionLabel == null) {
+      id = R.id.textScanLast;
+      TextView textScanLast = ViewBindings.findChildViewById(rootView, id);
+      if (textScanLast == null) {
         break missingId;
       }
 
-      id = R.id.textSubtitle;
-      TextView textSubtitle = ViewBindings.findChildViewById(rootView, id);
-      if (textSubtitle == null) {
+      id = R.id.textScanSubtitle;
+      TextView textScanSubtitle = ViewBindings.findChildViewById(rootView, id);
+      if (textScanSubtitle == null) {
         break missingId;
       }
 
-      id = R.id.waveDecor;
-      ImageView waveDecor = ViewBindings.findChildViewById(rootView, id);
-      if (waveDecor == null) {
+      id = R.id.textScanSummary;
+      TextView textScanSummary = ViewBindings.findChildViewById(rootView, id);
+      if (textScanSummary == null) {
         break missingId;
       }
 
-      return new ActivityMainBinding((ConstraintLayout) rootView, bottomNav, brandBand, emptyState,
-          fabNewScan, headerBar, headerLine, recyclerLocations, textAppTitle, textSectionLabel,
-          textSubtitle, waveDecor);
+      id = R.id.textScanTitle;
+      TextView textScanTitle = ViewBindings.findChildViewById(rootView, id);
+      if (textScanTitle == null) {
+        break missingId;
+      }
+
+      return new ActivityMainBinding((ConstraintLayout) rootView, acousticFieldBg, bottomNav,
+          cardScanSummary, emptyState, fabNewScan, headerScan, recyclerLocations, textScanBrand,
+          textScanLast, textScanSubtitle, textScanSummary, textScanTitle);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

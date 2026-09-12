@@ -1,0 +1,7 @@
+[
+{
+  "directory": "C:/Users/punya mittal/aquascope/feature-gaming/.cxx/Debug/5j595132/arm64-v8a",
+  "command": "C:\\Users\\PUNYAM~1\\AppData\\Local\\Android\\Sdk\\ndk\\251~1.893\\TOOLCH~1\\llvm\\prebuilt\\WINDOW~1\\bin\\CLANG_~1.EXE --target=aarch64-none-linux-android26 --sysroot=\"C:/Users/punya mittal/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot\" -Dsmriti_killfeed_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -O3 -fvisibility=hidden -fno-limit-debug-info  -fPIC -o CMakeFiles\\smriti_killfeed.dir\\killfeed.cpp.o -c \"C:\\Users\\punya mittal\\aquascope\\feature-gaming\\src\\main\\cpp\\killfeed.cpp\"",
+  "file": "C:\\Users\\punya mittal\\aquascope\\feature-gaming\\src\\main\\cpp\\killfeed.cpp"
+}
+]

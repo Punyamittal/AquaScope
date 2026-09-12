@@ -29,15 +29,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-light"
-                android:letterSpacing="0.24"
-                android:text="@string/aquascope_title"
+                android:letterSpacing="0.26"
+                android:text="@string/smriti_home_title"
                 android:textColor="@color/warm_white"
                 android:textSize="22sp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
                 android:letterSpacing="0.2"
                 android:text="@string/locations_heading"
                 android:textColor="@color/cyan"
@@ -47,10 +47,10 @@
                 android:id="@+id/textLocationLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/warm_white"
-                android:textSize="20sp" />
+            android:layout_marginTop="10dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/warm_white"
+            android:textSize="22sp" />
 
             <com.aquascope.ui.HaloIndicatorView
                 android:id="@+id/haloIndicator"
@@ -70,7 +70,7 @@
                 <com.aquascope.ui.AcousticFieldView
                     android:id="@+id/acousticFieldIdle"
                     android:layout_width="match_parent"
-                    android:layout_height="260dp" />
+                    android:layout_height="300dp" />
 
                 <TextView
                     android:id="@+id/textInstruction"
@@ -105,7 +105,7 @@
                 <com.aquascope.ui.AcousticFieldView
                     android:id="@+id/pulseView"
                     android:layout_width="match_parent"
-                    android:layout_height="280dp" />
+                    android:layout_height="300dp" />
 
                 <ProgressBar
                     android:id="@+id/progressBar"
@@ -162,7 +162,7 @@
                 <com.aquascope.ui.AcousticFieldView
                     android:id="@+id/acousticFieldResult"
                     android:layout_width="match_parent"
-                    android:layout_height="220dp"
+                    android:layout_height="240dp"
                     android:layout_marginTop="8dp" />
 
                 <LinearLayout

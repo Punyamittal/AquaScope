@@ -69,7 +69,8 @@ class LlmSandboxService : Service() {
             llm?.close()
         } catch (_: Throwable) {
         }
-        llm = MediaPipeLocalLlm.tryCreate(this, LocalModelStore(this))
+        val store = LocalModelStore(this)
+        llm = MediaPipeLocalLlm.tryCreate(this, store)
         val engine = llm
         return if (engine?.isReady == true) {
             Log.i(TAG, "sandbox model ready pid=${Process.myPid()} ${engine.modelLabel}")
@@ -77,7 +78,7 @@ class LlmSandboxService : Service() {
             // falsely mark a healthy MediaPipe engine as failed.
             ok(engine.modelLabel)
         } else {
-            val detail = engine?.lastError() ?: "MediaPipe did not load"
+            val detail = engine?.lastError() ?: store.status().message
             Log.w(TAG, "sandbox warmup failed: $detail")
             fail(detail)
         }

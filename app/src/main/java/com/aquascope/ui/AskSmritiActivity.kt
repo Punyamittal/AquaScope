@@ -143,12 +143,11 @@ class AskSmritiActivity : SmritiScreenActivity() {
     }
 
     private fun refreshModelBadge() {
-        val status = smriti.modelStatusLight()
         val mode = when {
             !smriti.llmPrefs.enabled -> "Rules"
             smriti.isLocalLlmReady() -> "Local"
-            status.ready -> "Local…"
-            else -> "System"
+            smriti.modelStore.findInstalled() != null -> "Local…"
+            else -> "Rules"
         }
         binding.textModelBadge.text = mode
     }
@@ -221,15 +220,17 @@ class AskSmritiActivity : SmritiScreenActivity() {
             }
             refreshModelBadge()
             if (smriti.llmPrefs.enabled && !answer.usedLocalModel && smriti.modelStore.findInstalled() != null) {
-                if (!smriti.isLocalLlmReady()) {
-                    val hint = smriti.llmFailureHint()
-                        ?: smriti.modelStatusLight().message
-                    Toast.makeText(
-                        this@AskSmritiActivity,
-                        "Rules answer — local model unavailable. $hint",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+                val hint = smriti.llmFailureHint()
+                    ?: smriti.modelStatusLight().message
+                Toast.makeText(
+                    this@AskSmritiActivity,
+                    if (smriti.isLocalLlmReady()) {
+                        "Rules answer — model ran but that reply was discarded. $hint"
+                    } else {
+                        "Rules answer — local model unavailable. $hint"
+                    },
+                    Toast.LENGTH_LONG
+                ).show()
             } else if (answer.usedLocalModel) {
                 Toast.makeText(
                     this@AskSmritiActivity,

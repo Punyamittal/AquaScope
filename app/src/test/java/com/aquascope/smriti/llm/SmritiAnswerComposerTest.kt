@@ -36,6 +36,18 @@ class SmritiAnswerComposerTest {
     }
 
     @Test
+    fun `allows a spoken chat-length rephrase of a short rule answer`() {
+        val spoken = "I don't have a scan for that yet. Try a kitchen scan, or ask about today's activity."
+        assertTrue(
+            SmritiAnswerComposer.passesGroundingCheck(
+                spoken,
+                rule,
+                com.aquascope.smriti.model.QueryIntent.GENERAL
+            )
+        )
+    }
+
+    @Test
     fun `prompt includes canonical answer and forbids invention`() {
         val prompt = GroundedPromptBuilder.build("Is it a leak?", rule, emptyList())
         assertTrue(prompt.contains("CANONICAL_ANSWER"))

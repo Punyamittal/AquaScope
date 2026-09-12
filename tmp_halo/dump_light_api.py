@@ -44,9 +44,9 @@ def get_string(idx):
 
 type_cache = [get_string(u4(d, type_ids_off + i * 4)) for i in range(type_ids_size)]
 
-print("TYPES")
+print("\nINNER TYPES")
 for i, n in enumerate(type_cache):
-    if "vivolight" in n.lower() or "VivoLight" in n:
+    if "IVivoLightManager" in n:
         print(i, n)
 
 print("\nMETHODS by class")

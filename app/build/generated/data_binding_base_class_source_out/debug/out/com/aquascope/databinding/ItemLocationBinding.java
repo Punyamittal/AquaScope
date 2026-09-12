@@ -4,6 +4,7 @@ package com.aquascope.databinding;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -18,7 +19,7 @@ import java.lang.String;
 
 public final class ItemLocationBinding implements ViewBinding {
   @NonNull
-  private final LinearLayout rootView;
+  private final FrameLayout rootView;
 
   @NonNull
   public final MaterialButton btnDelete;
@@ -30,25 +31,34 @@ public final class ItemLocationBinding implements ViewBinding {
   public final MaterialButton btnScan;
 
   @NonNull
+  public final LinearLayout cardPlace;
+
+  @NonNull
   public final TextView textInfo;
 
   @NonNull
   public final TextView textLabel;
 
-  private ItemLocationBinding(@NonNull LinearLayout rootView, @NonNull MaterialButton btnDelete,
+  @NonNull
+  public final TextView textStatusPill;
+
+  private ItemLocationBinding(@NonNull FrameLayout rootView, @NonNull MaterialButton btnDelete,
       @NonNull MaterialButton btnHistory, @NonNull MaterialButton btnScan,
-      @NonNull TextView textInfo, @NonNull TextView textLabel) {
+      @NonNull LinearLayout cardPlace, @NonNull TextView textInfo, @NonNull TextView textLabel,
+      @NonNull TextView textStatusPill) {
     this.rootView = rootView;
     this.btnDelete = btnDelete;
     this.btnHistory = btnHistory;
     this.btnScan = btnScan;
+    this.cardPlace = cardPlace;
     this.textInfo = textInfo;
     this.textLabel = textLabel;
+    this.textStatusPill = textStatusPill;
   }
 
   @Override
   @NonNull
-  public LinearLayout getRoot() {
+  public FrameLayout getRoot() {
     return rootView;
   }
 
@@ -91,6 +101,12 @@ public final class ItemLocationBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.cardPlace;
+      LinearLayout cardPlace = ViewBindings.findChildViewById(rootView, id);
+      if (cardPlace == null) {
+        break missingId;
+      }
+
       id = R.id.textInfo;
       TextView textInfo = ViewBindings.findChildViewById(rootView, id);
       if (textInfo == null) {
@@ -103,8 +119,14 @@ public final class ItemLocationBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ItemLocationBinding((LinearLayout) rootView, btnDelete, btnHistory, btnScan,
-          textInfo, textLabel);
+      id = R.id.textStatusPill;
+      TextView textStatusPill = ViewBindings.findChildViewById(rootView, id);
+      if (textStatusPill == null) {
+        break missingId;
+      }
+
+      return new ItemLocationBinding((FrameLayout) rootView, btnDelete, btnHistory, btnScan,
+          cardPlace, textInfo, textLabel, textStatusPill);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

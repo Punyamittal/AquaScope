@@ -54,14 +54,19 @@ class SmritiCore(context: Context) {
                 message = "Local model crashed in sandbox — Ask is using rules. Reload from System to retry."
             )
             isolatedLlm.isReady -> fileStatus.copy(
+                ready = true,
                 message = "Local model ready: ${isolatedLlm.modelLabel ?: fileStatus.displayName}"
             )
-            fileStatus.ready && llmLoadAttempted -> fileStatus.copy(
-                ready = isolatedLlm.isReady,
-                message = if (isolatedLlm.isReady) fileStatus.message
-                else "Model file found. Sandbox not ready — Ask uses rules until it loads."
+            !fileStatus.ready -> fileStatus
+            llmLoadAttempted -> fileStatus.copy(
+                ready = false,
+                message = isolatedLlm.lastFailure()
+                    ?: "Model file found (${fileStatus.displayName}). Sandbox not ready — Ask uses rules until it loads."
             )
-            else -> fileStatus
+            else -> fileStatus.copy(
+                ready = false,
+                message = "Model file found (${fileStatus.displayName}). Open Ask or tap Reload to load it."
+            )
         }
     }
 
@@ -239,11 +244,11 @@ class SmritiCore(context: Context) {
         }
     }
 
-    fun ask(question: String): SmritiAnswer {
+    fun ask(question: String, allowLocalLlm: Boolean = true): SmritiAnswer {
         val query = retrieval.parse(question)
         val retrieved = retrieval.retrieve(query)
         val ruleAnswer = reasoning.answer(query, retrieved)
-        if (!llmPrefs.enabled) {
+        if (!allowLocalLlm || !llmPrefs.enabled) {
             return ruleAnswer.copy(usedLocalModel = false, modelName = null)
         }
         // Wait for sandbox MediaPipe (separate process) so free-form Ask can use Qwen/Gemma.

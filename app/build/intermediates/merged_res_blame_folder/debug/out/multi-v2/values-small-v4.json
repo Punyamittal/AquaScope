@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.aquascope.app-mergeDebugResources-33:/values-small-v4/values-small-v4.xml",
+            "outputFile": "com.aquascope.app-mergeDebugResources-60:/values-small-v4/values-small-v4.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\punya mittal\\.gradle\\caches\\transforms-3\\184958b59b0b0fbc0694ac3308e227ed\\transformed\\material-1.11.0\\res\\values-small-v4\\values-small-v4.xml",
+                    "source": "C:\\Users\\punya mittal\\.gradle\\caches\\transforms-3\\3559eb5ebeaad62704f7fbaaa5a28630\\transformed\\material-1.11.0\\res\\values-small-v4\\values-small-v4.xml",
                     "from": {
                         "startLines": "2,3,4,5",
                         "startColumns": "4,4,4,4",

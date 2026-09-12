@@ -49,20 +49,33 @@ class LocalModelStore(context: Context) {
         val preferred = LocalModelCatalog.preferredFileNames()
         for (name in preferred) {
             val f = File(root, name)
-            if (f.isFile && f.length() > MIN_BYTES) return f
+            if (f.isFile && f.length() > MIN_BYTES && isLoadableMediaPipe(name)) return f
         }
-        return listModelFiles().firstOrNull { it.length() > MIN_BYTES }
+        val files = listModelFiles().filter { it.length() > MIN_BYTES && isLoadableMediaPipe(it.name) }
+        return files.firstOrNull { isPreferredTask(it.name) } ?: files.firstOrNull()
     }
 
     fun status(): LocalModelStatus {
         val file = findInstalled()
-        return if (file != null) {
-            LocalModelStatus(
+        if (file != null) {
+            return LocalModelStatus(
                 ready = true,
                 path = file.absolutePath,
                 displayName = file.name,
                 sizeBytes = file.length(),
-                message = "Local model ready: ${file.name}"
+                message = "Local model file found: ${file.name}"
+            )
+        }
+        val gallery = listModelFiles().firstOrNull {
+            it.length() > MIN_BYTES && it.name.endsWith(".litertlm", ignoreCase = true)
+        }
+        return if (gallery != null) {
+            LocalModelStatus(
+                ready = false,
+                path = gallery.absolutePath,
+                displayName = gallery.name,
+                sizeBytes = gallery.length(),
+                message = GALLERY_NPU_MESSAGE
             )
         } else {
             LocalModelStatus(
@@ -70,7 +83,7 @@ class LocalModelStore(context: Context) {
                 path = null,
                 displayName = null,
                 sizeBytes = 0L,
-                message = "No local model. Install Gemma 3 1B .task for iQOO 15."
+                message = MISSING_TASK_MESSAGE
             )
         }
     }
@@ -81,11 +94,81 @@ class LocalModelStore(context: Context) {
             ?: "model.task"
         val safe = name.replace(Regex("[^A-Za-z0-9._-]"), "_")
         val out = File(root, if (isModelFile(safe)) safe else "$safe.task")
+        val tmp = File(root, ".import.tmp")
         context.contentResolver.openInputStream(uri)?.use { input ->
-            FileOutputStream(out).use { output -> input.copyTo(output) }
+            FileOutputStream(tmp).use { output -> input.copyTo(output) }
         } ?: error("Could not open selected file")
-        require(out.length() > MIN_BYTES) { "Model file too small / empty" }
+        try {
+            validateCopied(tmp, safe)
+            if (out.exists()) out.delete()
+            if (!tmp.renameTo(out)) {
+                tmp.copyTo(out, overwrite = true)
+                tmp.delete()
+            }
+        } finally {
+            if (tmp.exists()) tmp.delete()
+        }
         return out
+    }
+
+    fun importFromFile(src: File): File {
+        require(src.isFile) { "Missing file ${src.name}" }
+        validateCopied(src, src.name)
+        val dest = File(root, if (isModelFile(src.name)) src.name else "${src.name}.task")
+        src.copyTo(dest, overwrite = true)
+        require(dest.length() > MIN_BYTES) { "Copy of ${src.name} was empty" }
+        return dest
+    }
+
+    /** Copies a Gemma/Qwen bundle already sitting in public Downloads. */
+    fun importFromPublicDownloads(): File {
+        val found = findInPublicDownloads()
+            ?: error(
+                "No Gemma .task in Downloads. Edge Gallery keeps models inside its own app — " +
+                    "share/export the file to Downloads, or use Import and pick gemma3-1b-it-int4.task."
+            )
+        return importFromFile(found)
+    }
+
+    fun findInPublicDownloads(): File? {
+        val dirs = listOf(
+            android.os.Environment.getExternalStoragePublicDirectory(
+                android.os.Environment.DIRECTORY_DOWNLOADS
+            ),
+            File("/storage/emulated/0/Download"),
+            File("/sdcard/Download")
+        )
+        val preferred = LocalModelCatalog.preferredFileNames()
+        val seen = HashSet<String>()
+        val candidates = mutableListOf<File>()
+        for (dir in dirs) {
+            val key = runCatching { dir.canonicalPath }.getOrElse { dir.absolutePath }
+            if (!seen.add(key) || !dir.isDirectory) continue
+            val files = dir.listFiles() ?: continue
+            for (f in files) {
+                if (!f.isFile || f.length() <= MIN_BYTES) continue
+                if (preferred.contains(f.name) ||
+                    (looksLikeGemmaBundle(f.name) && isLoadableMediaPipe(f.name))
+                ) {
+                    candidates += f
+                }
+            }
+        }
+        return candidates.firstOrNull { isPreferredTask(it.name) } ?: candidates.firstOrNull()
+    }
+
+    private fun validateCopied(file: File, displayName: String) {
+        require(file.isFile && file.length() > MIN_BYTES) {
+            "Model file too small. Gemma 3 1B is about 530 MB. Edge Gallery's in-app download is not visible to this app."
+        }
+        val header = ByteArray(24)
+        val n = file.inputStream().use { it.read(header) }
+        if (n > 0 && LocalModelDownloadPolicy.looksLikeHtml(header.copyOf(n))) {
+            error("That file is a web page, not a model. Import the .task binary, not a Hugging Face HTML page.")
+        }
+        if (displayName.lowercase().endsWith(".litertlm")) {
+            // Allowed on disk; MediaPipe may still reject NPU Gallery bundles.
+        }
     }
 
     fun deleteAll() {
@@ -106,8 +189,34 @@ class LocalModelStore(context: Context) {
 
         fun isModelFile(name: String): Boolean {
             val n = name.lowercase()
+            return n.endsWith(".task") || n.endsWith(".bin") ||
+                n.endsWith(".tflite") || n.endsWith(".litertlm")
+        }
+
+        fun isPreferredTask(name: String): Boolean {
+            val n = name.lowercase()
+            return n.endsWith(".task") || n.endsWith(".bin")
+        }
+
+        fun looksLikeGemmaBundle(name: String): Boolean {
+            val n = name.lowercase()
+            if (!isModelFile(n)) return false
+            return n.contains("gemma") || n.contains("qwen") ||
+                n == "model.task" || n == "llm.task"
+        }
+
+        fun isLoadableMediaPipe(name: String): Boolean {
+            val n = name.lowercase()
             return n.endsWith(".task") || n.endsWith(".bin") || n.endsWith(".tflite")
         }
+
+        const val GALLERY_NPU_MESSAGE =
+            "Found an Edge Gallery NPU file (.litertlm). This app cannot use Gallery's copy. " +
+                "Download Gemma 3 1B INT4 (.task) on this System screen, or Import gemma3-1b-it-int4.task."
+
+        const val MISSING_TASK_MESSAGE =
+            "No MediaPipe .task in this app. Downloading Gemma in Edge Gallery does not install it here — " +
+                "Gallery keeps models in its own sandbox. Download Gemma 3 1B on this screen."
     }
 }
 
