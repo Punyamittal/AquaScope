@@ -89,6 +89,8 @@ dependencies {
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:4.3")
     // Optional on-device LLM (Gemma via MediaPipe). App runs without a model file.
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    implementation("androidx.navigation:navigation-compose:2.7.5")
+    implementation(project(":smriti-aqua"))
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
