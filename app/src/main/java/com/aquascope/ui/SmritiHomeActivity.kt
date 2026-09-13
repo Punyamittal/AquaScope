@@ -53,6 +53,7 @@ class SmritiHomeActivity : SmritiScreenActivity() {
         binding.btnNeuralCore.setOnClickListener { SmritiNav.openNeuralCore(this) }
         binding.btnSmritiAqua.setOnClickListener { SmritiNav.openSmritiAqua(this) }
         binding.btnScreenMind.setOnClickListener { SmritiNav.openScreenMind(this) }
+        binding.btnHeartRate.setOnClickListener { SmritiNav.openHeartRate(this) }
     }
 
     override fun onResume() {

@@ -52,6 +52,12 @@ object SmritiNav {
         activity.startActivity(Intent(activity, ScreenMindActivity::class.java))
     }
 
+    fun openHeartRate(activity: Activity) {
+        activity.startActivity(
+            Intent(activity, com.aquascope.smriti.brain.heartrate.HeartRateActivity::class.java)
+        )
+    }
+
     private fun openTab(activity: Activity, from: Int, to: Int) {
         if (to == from) return
         val target = when (to) {

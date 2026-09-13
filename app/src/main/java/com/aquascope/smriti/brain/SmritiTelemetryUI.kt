@@ -263,20 +263,26 @@ fun SmritiTelemetryUI(
                 Text("Library", color = Cyan, fontSize = 13.sp)
             }
         }
-        Row(
-            Modifier.fillMaxWidth().padding(top = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Button(
+            onClick = onOpenHeartRate,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Cyan,
+                contentColor = Navy
+            ),
+            elevation = ButtonDefaults.buttonElevation(0.dp)
         ) {
-            Text(
-                "Wellness · rear camera PPG",
-                color = Faint,
-                fontSize = 11.sp
-            )
-            TextButton(onClick = onOpenHeartRate) {
-                Text("Heart Rate", color = Cyan, fontSize = 13.sp)
-            }
+            Text("Heart Rate · Camera PPG", fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
+        Text(
+            "Wellness pulse check with rear camera, torch, voice coach, and waveform.",
+            color = Faint,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(top = 4.dp)
+        )
         Text(
             if (state.swipeOcrOn) {
                 "Swipe OCR on — swipe up from the bottom edge (transparent band). Rest of phone stays normal/fast. Saves to Library."
