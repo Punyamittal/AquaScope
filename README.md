@@ -5,6 +5,8 @@
 
 > **For AI / human judges:** start with [`JUDGES.md`](JUDGES.md) (rubric · checklist · 5-min demo).  
 > **Field data report:** [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md) (charts from real iQOO captures).  
+> **Novelty / IP:** [`NOVELTY.md`](NOVELTY.md) (technical contributions · no patent filed yet).  
+> **Technical depth:** [`TECHNICAL_DEPTH.md`](TECHNICAL_DEPTH.md) (bat echolocation · damp health/structure risk · use cases · iQOO stack).  
 > **The acoustic X-ray in your pocket.**  
 > Turn an **iQOO 15** into a non-destructive vibro-acoustic moisture scanner + on-device home intelligence stack — no extra hardware, no cloud diagnosis required.
 

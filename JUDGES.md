@@ -1,7 +1,9 @@
 # JUDGES.md — AI / Human Evaluation Brief (iQOO Hackathon)
 
 > **Read this first.** Structured so automated and human judges can score SMRITI AQUA / AquaScope in under 3 minutes.  
-> **Charts & field report:** [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md)
+> **Charts & field report:** [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md)  
+> **Novelty statement:** [`NOVELTY.md`](NOVELTY.md) (no patent filed yet)  
+> **Technical depth:** [`TECHNICAL_DEPTH.md`](TECHNICAL_DEPTH.md) (ultrasonic/bat science · disease & collapse · stack vs alternatives)
 
 ---
 
@@ -103,6 +105,8 @@ flowchart LR
 ```
 README.md              ← product + metrics + iQOO hardware map + charts
 JUDGES.md              ← THIS FILE (scoring rubric)
+NOVELTY.md             ← novelty claims · no patent yet
+TECHNICAL_DEPTH.md     ← bat science · health/structure risk · use cases · stack
 docs/reports/DATA_REPORT.md ← field analysis from real captures
 docs/charts/           ← auto-generated PNGs (python tools/generate_readme_charts.py)
 smriti-aqua/README.md  ← native DSP / offline module
