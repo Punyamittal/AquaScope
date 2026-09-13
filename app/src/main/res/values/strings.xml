@@ -18,6 +18,15 @@
     <string name="screenmind_empty_notice">Search your screen history or ask what was on your screen.</string>
     <string name="neural_core_section">NEURAL CORE</string>
     <string name="neural_core_blurb">Guardian, play capture, IR, and on-device recall live in this same app as acoustic sensing.</string>
+    <string name="heart_rate_title">Heart Rate</string>
+    <string name="heart_rate_blurb">Measure your heart rate using your phone\'s camera and flashlight.</string>
+    <string name="heart_rate_instructions">Place your fingertip gently over the rear camera and flashlight. Keep your finger still and cover both completely.</string>
+    <string name="heart_rate_disclaimer">This measurement is for wellness purposes only and is not intended to diagnose, treat, or monitor medical conditions.</string>
+    <string name="heart_rate_poor_signal">Poor signal. Keep your finger still and completely cover the camera and flashlight.</string>
+    <string name="heart_rate_start">Start Measurement</string>
+    <string name="heart_rate_stop">Stop</string>
+    <string name="heart_rate_again">Measure Again</string>
+    <string name="heart_rate_cam_denied">Camera permission is required for heart-rate measurement.</string>
     <string name="smriti_home_sub">HOME MEMORY</string>
     <string name="nav_home">Home</string>
     <string name="nav_scan">Scan</string>

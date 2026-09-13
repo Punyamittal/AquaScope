@@ -89,6 +89,7 @@ fun SmritiTelemetryUI(
     onScreenMindPc: (Boolean) -> Unit = {},
     onSwipeOcr: (Boolean) -> Unit = {},
     onOpenLibrary: () -> Unit = {},
+    onOpenHeartRate: () -> Unit = {},
     onArmPlay: () -> Unit,
     onDisarmPlay: () -> Unit,
     onManualClip: () -> Unit,
@@ -260,6 +261,20 @@ fun SmritiTelemetryUI(
             QuietSwitch("Swipe OCR", state.swipeOcrOn, on = onSwipeOcr)
             TextButton(onClick = onOpenLibrary) {
                 Text("Library", color = Cyan, fontSize = 13.sp)
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(top = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Wellness · rear camera PPG",
+                color = Faint,
+                fontSize = 11.sp
+            )
+            TextButton(onClick = onOpenHeartRate) {
+                Text("Heart Rate", color = Cyan, fontSize = 13.sp)
             }
         }
         Text(

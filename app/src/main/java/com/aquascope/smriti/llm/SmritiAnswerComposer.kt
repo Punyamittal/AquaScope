@@ -6,9 +6,9 @@ import com.aquascope.smriti.model.SmritiAnswer
 import com.aquascope.smriti.skills.SkillMatch
 
 /**
- * Rules are the source of truth. Local LLM rephrases or answers free-form from grounded facts.
- * Edge Gallery–style skills may inject instructions / tool results.
- * Multilingual fallback ensures natural responses in Hindi/Hinglish when LLM is absent or fallback needed.
+ * Ask is Qwen-primary when the local MediaPipe model is ready.
+ * Qwen answers entirely from APP_DATA (home, Guardian, scans, OCR, memory).
+ * Rules / skills are fallback only when the model is off, not loaded, or hard-fails.
  */
 class SmritiAnswerComposer(
     private val llm: LocalLlmEngine?,
@@ -21,7 +21,8 @@ class SmritiAnswerComposer(
         intent: QueryIntent = QueryIntent.GENERAL,
         skillMatch: SkillMatch? = null,
         skillCatalogBlurb: String = "",
-        language: String = prefs.targetLanguage
+        language: String = prefs.targetLanguage,
+        appContext: String = ""
     ): SmritiAnswer {
         val target = GroundedPromptBuilder.detectLanguage(question, language)
         val cleanedRule = fallbackAnswer(
@@ -29,7 +30,7 @@ class SmritiAnswerComposer(
             target
         )
 
-        // Tool-only skills can answer without a model (hash / email / wikipedia).
+        // Pure tool skills (hash / email / wikipedia) can answer without a model when LLM is off.
         if (skillMatch != null &&
             !skillMatch.toolResult.isNullOrBlank() &&
             (llm == null || !llm.isReady || !prefs.enabled)
@@ -45,15 +46,15 @@ class SmritiAnswerComposer(
             return cleanedRule.copy(usedLocalModel = false, modelName = null)
         }
 
-        val prompt = if (intent == QueryIntent.GENERAL || skillMatch?.skill?.id == "kitchen-adventure") {
-            GroundedPromptBuilder.buildChat(
-                question, cleanedRule, cleanedRule.relatedEvents, skillMatch, skillCatalogBlurb, target
-            )
-        } else {
-            GroundedPromptBuilder.build(
-                question, cleanedRule, cleanedRule.relatedEvents, skillMatch, skillCatalogBlurb, target
-            )
-        }
+        val prompt = GroundedPromptBuilder.buildAsk(
+            question = question,
+            ruleAnswer = cleanedRule,
+            events = cleanedRule.relatedEvents,
+            skillMatch = skillMatch,
+            skillCatalogBlurb = skillCatalogBlurb,
+            language = target,
+            appContext = appContext
+        )
 
         val polished = try {
             val raw = llm.generate(prompt)
@@ -71,13 +72,12 @@ class SmritiAnswerComposer(
         }
 
         val cleaned = AskAnswerCleaner.cleanModelOutput(polished)
-        val screenQa = looksLikeScreenOrMemoryQa(question, cleanedRule)
         val hasScreenOcr = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr.isNotBlank()
-        // Never relax for Wikipedia / world tools when answering from a clip.
-        val relaxGrounding = skillMatch?.skill?.id == "kitchen-adventure" ||
-            (skillMatch?.skill?.tool != null && skillMatch.skill.id != "query-wikipedia" && !hasScreenOcr) ||
-            (intent == QueryIntent.GENERAL && !screenQa && !hasScreenOcr)
+        val hasAppFacts = appContext.isNotBlank() ||
+            cleanedRule.relatedEvents.isNotEmpty() ||
+            hasScreenOcr
 
+        // Hard reject only: blank / prompt leak / invented confirmed leak.
         if (cleaned.isBlank() || AskAnswerCleaner.looksLikePromptLeak(cleaned)) {
             return if (!skillMatch?.toolResult.isNullOrBlank() && !hasScreenOcr) {
                 cleanedRule.copy(
@@ -90,16 +90,21 @@ class SmritiAnswerComposer(
             }
         }
 
-        if (!relaxGrounding && !passesGroundingCheck(cleaned, cleanedRule, intent)) {
+        if (!passesGroundingCheck(cleaned, cleanedRule, QueryIntent.GENERAL)) {
             return cleanedRule.copy(usedLocalModel = false, modelName = null)
         }
 
-        // Soft leak check still applies for relaxed GENERAL.
-        if (relaxGrounding && !passesGroundingCheck(cleaned, cleanedRule, QueryIntent.GENERAL)) {
-            return cleanedRule.copy(usedLocalModel = false, modelName = null)
+        // When APP_DATA was provided, Qwen owns the spoken answer — keep it.
+        // Soft screen-token check only when we have OCR but the reply invents a named app.
+        if (hasAppFacts) {
+            return cleanedRule.copy(
+                text = cleaned,
+                usedLocalModel = true,
+                modelName = llm.modelLabel
+            )
         }
 
-        // Screen answers must overlap the latest clip / rule text — otherwise keep the rule dump.
+        val screenQa = looksLikeScreenOrMemoryQa(question, cleanedRule)
         if ((screenQa || hasScreenOcr) && !overlapsScreenFacts(cleaned, cleanedRule)) {
             return cleanedRule.copy(usedLocalModel = false, modelName = null)
         }

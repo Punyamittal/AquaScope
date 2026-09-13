@@ -134,27 +134,62 @@ class MediaPipeLocalLlm(
         return text
     }
 
-    /** Prefer USER_QUESTION + SCREEN_OCR over prefix-only take() which dropped the clip. */
+    /** Prefer USER_QUESTION + APP_DATA facts over prefix-only take() which dropped the clip. */
     private fun keepQuestionAndScreenFacts(raw: String, tokenBudget: Int): String {
         val charBudget = (tokenBudget * 3).coerceAtLeast(800)
         val q = Regex("USER_QUESTION:\\s*(.+)").find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
-        val ocr = Regex("SCREEN_OCR:\\s*([\\s\\S]*?)(?:\\nEVIDENCE_STATE:|\\nCANONICAL_ANSWER:|\\nMEMORY_EVENTS)")
+        val ocr = Regex("SCREEN_OCR:\\s*([\\s\\S]*?)(?:\\nEVIDENCE_STATE:|\\nAPP_HINT|\\nRULES_HINT|\\nCANONICAL_ANSWER:|\\nMEMORY_EVENTS|\\nNEURAL_MEMORY|\\nHOME_STATUS:|\\nGUARDIAN:)")
             .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
-        val canon = Regex("CANONICAL_ANSWER:\\s*([\\s\\S]*?)(?:\\nSCREEN_OCR:|\\nMEMORY_EVENTS|\\nEVIDENCE_STATE:)")
+        val home = Regex("HOME_STATUS:\\s*([\\s\\S]*?)(?:\\nGUARDIAN:|\\nSCAN_LOCATIONS:|\\nSCREEN_OCR:|\\nNEURAL_MEMORY:|\\nEVIDENCE_STATE:)")
+            .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        val guardian = Regex("GUARDIAN:\\s*([\\s\\S]*?)(?:\\nSCAN_LOCATIONS:|\\nSCREEN_OCR:|\\nNEURAL_MEMORY:|\\nEVIDENCE_STATE:|\\nRELATED_EVENT)")
+            .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        val scans = Regex("SCAN_LOCATIONS:\\s*([\\s\\S]*?)(?:\\nSCREEN_OCR:|\\nNEURAL_MEMORY:|\\nEVIDENCE_STATE:|\\nRELATED_EVENT|\\nAPP_HINT|\\nRULES_HINT)")
+            .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        val neural = Regex("NEURAL_MEMORY[^\\n]*:\\s*([\\s\\S]*?)(?:\\nSCREEN_OCR:|\\nEVIDENCE_STATE:|\\nAPP_HINT|\\nRULES_HINT|\\nMEMORY_EVENTS|\\nRELATED_EVENT|\\nANSWER:)")
+            .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+        val hint = Regex("(?:APP_HINT[^:\\n]*:|RULES_HINT[^:\\n]*:|CANONICAL_ANSWER:)\\s*([\\s\\S]*?)(?:\\nSCREEN_OCR:|\\nMEMORY_EVENTS|\\nEVIDENCE_STATE:|\\nSUGGESTED)")
             .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
             .ifBlank {
                 Regex("CANONICAL_ANSWER:\\s*([\\s\\S]*?)(?:\\nMEMORY_EVENTS)")
                     .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
             }
+        val events = Regex("MEMORY_EVENTS[^\\n]*:\\s*([\\s\\S]*?)(?:\\nSUGGESTED_ACTIONS:|\\nANSWER:|$)")
+            .find(raw)?.groupValues?.getOrNull(1)?.trim().orEmpty()
         val compact = buildString {
-            appendLine("Answer ONLY from SCREEN_OCR / CANONICAL_ANSWER. Under 120 words.")
+            appendLine("Answer ONLY from APP_DATA below. Under 140 words. Do not invent.")
             appendLine("USER_QUESTION: ${q.take(200)}")
             appendLine()
+            if (home.isNotBlank()) {
+                appendLine("HOME_STATUS:")
+                appendLine(home.take(400))
+                appendLine()
+            }
+            if (guardian.isNotBlank()) {
+                appendLine("GUARDIAN:")
+                appendLine(guardian.take(300))
+                appendLine()
+            }
+            if (scans.isNotBlank()) {
+                appendLine("SCAN_LOCATIONS:")
+                appendLine(scans.take(400))
+                appendLine()
+            }
+            if (neural.isNotBlank()) {
+                appendLine("NEURAL_MEMORY:")
+                appendLine(neural.take(600))
+                appendLine()
+            }
             appendLine("SCREEN_OCR:")
-            appendLine(ocr.take(1_600).ifBlank { "(none)" })
+            appendLine(ocr.take(1_200).ifBlank { "(none)" })
             appendLine()
-            appendLine("CANONICAL_ANSWER:")
-            appendLine(canon.take(800).ifBlank { "(none)" })
+            appendLine("APP_HINT:")
+            appendLine(hint.take(600).ifBlank { "(none)" })
+            if (events.isNotBlank()) {
+                appendLine()
+                appendLine("MEMORY_EVENTS:")
+                appendLine(events.take(800))
+            }
             appendLine()
             append("ANSWER:")
         }
@@ -167,7 +202,7 @@ class MediaPipeLocalLlm(
         return if (name.contains("gemma")) {
             "<start_of_turn>user\n$raw<end_of_turn>\n<start_of_turn>model\n"
         } else if (name.contains("qwen")) {
-            "<|im_start|>system\nYou are SMRITI, an on-device home acoustic-memory assistant. Follow the facts strictly.<|im_end|>\n<|im_start|>user\n$raw<|im_end|>\n<|im_start|>assistant\n"
+            "<|im_start|>system\nYou are SMRITI. Answer USER_QUESTION yourself using only APP_DATA. Do not invent events or confirmed leaks.<|im_end|>\n<|im_start|>user\n$raw<|im_end|>\n<|im_start|>assistant\n"
         } else {
             raw
         }

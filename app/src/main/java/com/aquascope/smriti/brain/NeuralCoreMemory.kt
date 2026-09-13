@@ -55,6 +55,7 @@ object NeuralCoreMemory {
             "IR" -> "IR blaster"
             "GUARDIAN" -> "Guardian"
             "OCR" -> "ScreenMind OCR"
+            "HEART_RATE" -> "Heart rate (camera PPG)"
             else -> "This phone"
         }
         SmritiCore.get(context).rememberObservation(

@@ -7,6 +7,7 @@ import com.aquascope.smriti.engine.EvidenceEngine
 import com.aquascope.smriti.engine.EventNormalizer
 import com.aquascope.smriti.engine.ReasoningEngine
 import com.aquascope.smriti.engine.RetrievalEngine
+import com.aquascope.smriti.llm.AskAnswerCleaner
 import com.aquascope.smriti.llm.IsolatedLlmClient
 import com.aquascope.smriti.llm.LocalLlmPreferences
 import com.aquascope.smriti.llm.LocalModelDownloader
@@ -38,7 +39,8 @@ import java.util.Calendar
 
 /**
  * Facade for the SMRITI intelligence layer above AquaScope sensing.
- * On-device first: capture → normalize → store → retrieve → reason → optional local LLM rephrase.
+ * On-device first: capture → normalize → store → retrieve → reason → Qwen answers from APP_DATA
+ * when the local MediaPipe model is ready (rules/skills only as fallback).
  */
 class SmritiCore(context: Context) {
 
@@ -397,9 +399,18 @@ class SmritiCore(context: Context) {
             return ruleAnswer.copy(usedLocalModel = false, modelName = null)
         }
         val targetLang = language ?: llmPrefs.targetLanguage
+        val appContext = buildAskAppContext(ruleAnswer, episodesForBoost)
         return try {
             SmritiAnswerComposer(isolatedLlm, llmPrefs)
-                .compose(question, ruleAnswer, query.intent, skillMatch, catalogBlurb, targetLang)
+                .compose(
+                    question = question,
+                    ruleAnswer = ruleAnswer,
+                    intent = query.intent,
+                    skillMatch = skillMatch,
+                    skillCatalogBlurb = catalogBlurb,
+                    language = targetLang,
+                    appContext = appContext
+                )
         } catch (t: Throwable) {
             Log.w("SmritiCore", "LLM compose failed", t)
             if (!toolResult.isNullOrBlank()) {
@@ -415,6 +426,78 @@ class SmritiCore(context: Context) {
     }
 
     fun llmFailureHint(): String? = isolatedLlm.lastFailure()
+
+    /**
+     * Compact APP_DATA block for Qwen: home status, Guardian, ultrasonic scans, neural memory.
+     */
+    private fun buildAskAppContext(
+        ruleAnswer: SmritiAnswer,
+        neuralEpisodes: List<com.aquascope.smriti.brain.EpisodeRecord> = emptyList()
+    ): String = buildString {
+        runCatching {
+            val snap = homeMemorySnapshot()
+            appendLine("HOME_STATUS:")
+            appendLine(snap.statusLine)
+            appendLine("memories_today=${snap.memoriesToday} · anomalies_observed=${snap.anomaliesObserved}")
+            if (snap.nodes.isNotEmpty()) {
+                snap.nodes.take(8).forEach { n ->
+                    val pulse = when (n.pulse) {
+                        MemoryNodeState.PULSE_ANOMALY -> "anomaly"
+                        MemoryNodeState.PULSE_ACTIVE -> "active today"
+                        else -> "normal"
+                    }
+                    appendLine("- ${n.label}: $pulse")
+                }
+            }
+            appendLine()
+        }
+        runCatching {
+            val prefs = com.aquascope.smriti.brain.NeuralCorePrefs(appContext)
+            val guardianOn = com.aquascope.smriti.brain.GuardianService.isRunning() || prefs.guardianOn
+            val line = com.aquascope.smriti.brain.GuardianService.snapshotLine.value
+            appendLine("GUARDIAN:")
+            appendLine(
+                AskAnswerCleaner.userFacingSummary(
+                    if (line.isNotBlank() && line != "Guardian off") line
+                    else if (guardianOn) "Guardian is on."
+                    else "Guardian is off."
+                )
+            )
+            appendLine(if (prefs.irArmed) "IR: armed" else "IR: disarmed")
+            appendLine()
+        }
+        runCatching {
+            val locs = com.aquascope.data.ScanRepository(appContext).loadLocations()
+            if (locs.isNotEmpty()) {
+                appendLine("SCAN_LOCATIONS:")
+                locs.take(8).forEach { loc ->
+                    val last = loc.scanHistory.maxByOrNull { it.timestamp }
+                    val stage = loc.scoreStage
+                    val lastBit = last?.let {
+                        "last_score=${"%.0f".format(it.anomalyScore)}% · scans=${loc.scanHistory.size}"
+                    } ?: "no compares yet"
+                    appendLine(
+                        "- ${loc.label}: baselines=${loc.baselineFeatures.size} · " +
+                            "moist=${loc.moistFeatures.size} · stage=$stage · $lastBit"
+                    )
+                }
+                appendLine()
+            }
+        }
+        if (neuralEpisodes.isNotEmpty()) {
+            appendLine("NEURAL_MEMORY (${neuralEpisodes.size}):")
+            neuralEpisodes.take(8).forEach { ep ->
+                val whenStr = java.text.SimpleDateFormat("d MMM, h:mm a", java.util.Locale.US)
+                    .format(java.util.Date(ep.timestampMs))
+                val body = AskAnswerCleaner.userFacingSummary(ep.body).take(400)
+                appendLine("- $whenStr [${ep.source}/${ep.kind}] ${ep.title}: $body")
+            }
+            appendLine()
+        }
+        if (ruleAnswer.relatedEvents.isNotEmpty()) {
+            appendLine("RELATED_EVENT_COUNT: ${ruleAnswer.relatedEvents.size}")
+        }
+    }.trim()
 
     /**
      * Always pin the freshest Clip/OCR at the front. Older SCREENMIND rows must not

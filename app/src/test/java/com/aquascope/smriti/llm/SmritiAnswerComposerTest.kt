@@ -48,10 +48,12 @@ class SmritiAnswerComposerTest {
     }
 
     @Test
-    fun `prompt includes canonical answer and forbids invention`() {
-        val prompt = GroundedPromptBuilder.build("Is it a leak?", rule, emptyList())
-        assertTrue(prompt.contains("CANONICAL_ANSWER"))
+    fun `prompt asks model to answer from APP_DATA without inventing`() {
+        val prompt = GroundedPromptBuilder.buildAsk("Is it a leak?", rule, emptyList())
+        assertTrue(prompt.contains("APP_DATA"))
         assertTrue(prompt.contains("Do NOT invent"))
         assertTrue(prompt.contains(rule.text))
+        assertTrue(prompt.contains("APP_HINT"))
+        assertTrue(prompt.contains("completely handle Ask"))
     }
 }

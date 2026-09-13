@@ -18,8 +18,10 @@ import com.aquascope.databinding.ActivityAskSmritiBinding
 import com.aquascope.halo.SmritiLightMapper
 import com.aquascope.halo.SmritiLightState
 import com.aquascope.smriti.SmritiCore
+import com.aquascope.smriti.brain.SmritiMemoryEngine
 import com.aquascope.smriti.model.EvidenceState
 import com.aquascope.smriti.model.SmritiAnswer
+import com.aquascope.smriti.llm.LocalModelCatalog
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
@@ -187,10 +189,15 @@ class AskSmritiActivity : SmritiScreenActivity() {
     }
 
     private fun refreshModelBadge() {
+        val installed = smriti.modelStore.findInstalled()
+        val isQwen = installed?.name?.contains("qwen", ignoreCase = true) == true ||
+            LocalModelCatalog.entryForFileName(installed?.name.orEmpty())?.id?.contains("qwen") == true
         val mode = when {
             !smriti.llmPrefs.enabled -> "Rules"
+            smriti.isLocalLlmReady() && isQwen -> "Qwen"
             smriti.isLocalLlmReady() -> "Local"
-            smriti.modelStore.findInstalled() != null -> "Local…"
+            installed != null && isQwen -> "Qwen…"
+            installed != null -> "Local…"
             else -> "Rules"
         }
         binding.textModelBadge.text = mode
@@ -215,7 +222,18 @@ class AskSmritiActivity : SmritiScreenActivity() {
         lifecycleScope.launch {
             val answer = try {
                 withContext(Dispatchers.Default) {
-                    smriti.ask(question)
+                    val engine = SmritiMemoryEngine(this@AskSmritiActivity)
+                    val mem = runCatching { engine.recall(question) }.getOrNull()
+                    val recent = runCatching { engine.timeline(12) }.getOrNull().orEmpty()
+                    val episodes = when {
+                        mem?.found == true && mem.matches.isNotEmpty() ->
+                            (mem.matches + recent).distinctBy { it.id }.take(12)
+                        else -> recent
+                    }
+                    smriti.ask(
+                        question = question,
+                        neuralEpisodes = episodes
+                    )
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "Ask failed", t)

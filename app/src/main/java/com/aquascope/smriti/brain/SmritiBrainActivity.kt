@@ -129,6 +129,14 @@ class SmritiBrainActivity : SmritiScreenActivity() {
                         onOpenLibrary = {
                             startActivity(Intent(this@SmritiBrainActivity, ScreenLibraryActivity::class.java))
                         },
+                        onOpenHeartRate = {
+                            startActivity(
+                                Intent(
+                                    this@SmritiBrainActivity,
+                                    com.aquascope.smriti.brain.heartrate.HeartRateActivity::class.java
+                                )
+                            )
+                        },
                         onArmPlay = {
                             val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
                             projection.launch(mgr.createScreenCaptureIntent())
