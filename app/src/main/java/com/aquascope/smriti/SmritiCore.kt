@@ -48,6 +48,8 @@ class SmritiCore(context: Context) {
     val llmPrefs = LocalLlmPreferences(appContext)
     val ollamaPrefs = OllamaPreferences(appContext)
     val ollamaClient = OllamaClient(ollamaPrefs)
+    val sarvamPrefs = com.aquascope.smriti.llm.SarvamPreferences(appContext)
+    private val sarvamClient = com.aquascope.smriti.llm.SarvamClient(sarvamPrefs)
     val modelDownloader = LocalModelDownloader(appContext, modelStore)
     val skillCatalog = SkillCatalog(appContext)
     val skillPrefs = SkillPreferences(appContext)
@@ -398,7 +400,7 @@ class SmritiCore(context: Context) {
         }
         val targetLang = language ?: llmPrefs.targetLanguage
         return try {
-            SmritiAnswerComposer(isolatedLlm, llmPrefs)
+            SmritiAnswerComposer(isolatedLlm, llmPrefs, sarvamClient)
                 .compose(question, ruleAnswer, query.intent, skillMatch, catalogBlurb, targetLang)
         } catch (t: Throwable) {
             Log.w("SmritiCore", "LLM compose failed", t)

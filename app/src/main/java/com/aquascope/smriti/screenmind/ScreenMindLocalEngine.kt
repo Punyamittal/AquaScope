@@ -14,6 +14,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -179,16 +180,26 @@ class ScreenMindLocalEngine private constructor(private val context: Context) {
             "Screen capture processed at ${timeFmt.format(Date())}"
         }
 
-        val category = when {
-            ocrText.contains("leak", true) || ocrText.contains("pipe", true) -> "WATER_DIAGNOSTICS"
-            ocrText.contains("chrome", true) || ocrText.contains("http", true) -> "BROWSER"
-            ocrText.contains("message", true) || ocrText.contains("chat", true) -> "COMMUNICATION"
-            else -> "SYSTEM_UI"
-        }
+        // Richer 12-bucket OCR classification
+        val cat = ScreenMindCategory.classifyOcr(ocrText, appHint)
+        val category = cat.key
 
+        // Smarter summary: skip single-word / very short / numeric-only lines
         val summary = if (ocrText.isNotBlank()) {
-            val lines = ocrText.lines().filter { it.isNotBlank() }
-            lines.take(2).joinToString(" · ")
+            val meaningful = ocrText.lines()
+                .map { it.trim() }
+                .filter { line ->
+                    line.length > 8
+                        && line.split(" ").size >= 2
+                        && !line.matches(Regex("[\\d:./%, ]+"))
+                }
+            when {
+                meaningful.size >= 2 -> "${meaningful[0]} · ${meaningful[1]}"
+                    .let { if (it.length > 120) it.take(117) + "…" else it }
+                meaningful.size == 1 ->
+                    if (meaningful[0].length > 120) meaningful[0].take(117) + "…" else meaningful[0]
+                else -> "Visual capture from $appHint"
+            }
         } else {
             "Visual capture from $appHint"
         }
@@ -328,7 +339,7 @@ class ScreenMindLocalEngine private constructor(private val context: Context) {
 
         return ScreenMindLocalEpisode(
             id = id,
-            timestamp = dateFmt.format(Date(timestampMs)),
+            timestamp = relativeTime(timestampMs),
             timestampMs = timestampMs,
             appName = app,
             category = category,
@@ -337,6 +348,31 @@ class ScreenMindLocalEngine private constructor(private val context: Context) {
             score = score,
             isPhysicalScan = isPhys
         )
+    }
+
+    /** Returns a human-friendly relative timestamp string. */
+    private fun relativeTime(ms: Long): String {
+        val now = System.currentTimeMillis()
+        val diff = now - ms
+        return when {
+            diff < 60_000L -> "Just now"
+            diff < 3_600_000L -> "${diff / 60_000} min ago"
+            diff < 7_200_000L -> "1 hour ago"
+            else -> {
+                val cal = Calendar.getInstance()
+                val today = Calendar.getInstance().apply { timeInMillis = now }
+                cal.timeInMillis = ms
+                when {
+                    cal.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
+                            && cal.get(Calendar.YEAR) == today.get(Calendar.YEAR) ->
+                        "Today " + timeFmt.format(Date(ms))
+                    cal.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR) - 1
+                            && cal.get(Calendar.YEAR) == today.get(Calendar.YEAR) ->
+                        "Yesterday " + timeFmt.format(Date(ms))
+                    else -> dateFmt.format(Date(ms))
+                }
+            }
+        }
     }
 
     companion object {

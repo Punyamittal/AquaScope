@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.Locale
 
@@ -62,6 +63,8 @@ class BrainViewModel(app: Application) : AndroidViewModel(app), SensorEventListe
         com.aquascope.smriti.brain.screenmind.ScreenMindPreferences(app)
     private val screenMindPc =
         com.aquascope.smriti.brain.screenmind.ScreenMindPcClient(screenMindPrefs)
+    private val indicTtsClient = com.aquascope.smriti.tts.IndicTtsClient(screenMindPrefs)
+    private val indicTtsPlayer = com.aquascope.smriti.tts.IndicTtsPlayer(app)
     private val am = app.getSystemService(ActivityManager::class.java)
     private val sensors = app.getSystemService(SensorManager::class.java)
     private var tts: TextToSpeech? = null
@@ -952,6 +955,32 @@ class BrainViewModel(app: Application) : AndroidViewModel(app), SensorEventListe
 
     private fun speak(text: String) {
         _state.update { it.copy(orb = OrbState.SPEAKING) }
+        val smriti = SmritiCore.get(getApplication())
+        val configured = smriti.llmPrefs.targetLanguage.lowercase()
+        val target = if (configured == "auto") {
+            com.aquascope.smriti.llm.GroundedPromptBuilder.detectLanguage(text)
+        } else {
+            configured
+        }
+        val useIndicTts = target in com.aquascope.smriti.llm.SarvamPreferences.INDIAN_LANGUAGE_TARGETS &&
+            screenMindPrefs.pcEnabled && screenMindPrefs.ttsEnabled
+        if (useIndicTts) {
+            viewModelScope.launch {
+                val bytes = withTimeoutOrNull(20_000L) { indicTtsClient.speak(text, target) }
+                    ?.getOrNull()
+                if (bytes != null) {
+                    indicTtsPlayer.play(wavBytes = bytes, onError = { speakWithAndroidTts(text) })
+                } else {
+                    speakWithAndroidTts(text)
+                }
+            }
+            return
+        }
+        speakWithAndroidTts(text)
+    }
+
+    /** Fallback / default path — Android's built-in TextToSpeech, unchanged from before. */
+    private fun speakWithAndroidTts(text: String) {
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "smriti-recall")
     }
 
@@ -974,6 +1003,7 @@ class BrainViewModel(app: Application) : AndroidViewModel(app), SensorEventListe
     override fun onCleared() {
         sensors?.unregisterListener(this)
         tts?.shutdown()
+        indicTtsPlayer.stop()
         super.onCleared()
     }
 }

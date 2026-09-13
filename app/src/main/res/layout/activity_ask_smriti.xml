@@ -240,7 +240,7 @@
             android:contentDescription="@string/ask_smriti"
             android:padding="10dp"
             android:scaleType="centerInside"
-            android:src="@drawable/ic_ask_wave" />
+            android:src="@drawable/ic_send" />
     </LinearLayout>
 
     <com.aquascope.ui.SmritiNavBar

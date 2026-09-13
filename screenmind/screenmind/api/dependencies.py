@@ -45,15 +45,17 @@ embedder: Optional[Embedder] = None
 capture_worker = None
 analysis_worker = None
 audio_worker = None
+tts_engine = None
 
 
 
 
-def init(database: Database, emb: Optional[Embedder], cap_worker, ana_worker, aud_worker):
+def init(database: Database, emb: Optional[Embedder], cap_worker, ana_worker, aud_worker, tts_eng=None):
     """Initialize shared state. Called once from create_app."""
-    global db, embedder, capture_worker, analysis_worker, audio_worker
+    global db, embedder, capture_worker, analysis_worker, audio_worker, tts_engine
     db = database
     embedder = emb
     capture_worker = cap_worker
     analysis_worker = ana_worker
     audio_worker = aud_worker
+    tts_engine = tts_eng

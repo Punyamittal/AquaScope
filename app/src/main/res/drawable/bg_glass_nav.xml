@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glassmorphism nav bar: deep navy glass with frosted top border line -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Main nav fill: dark glass -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/glass_nav" />
+        </shape>
+    </item>
+    <!-- Top border line — frosted edge -->
+    <item android:bottom="0dp" android:left="0dp" android:right="0dp" android:top="0dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/glass_nav_border" />
+        </shape>
+    </item>
+</layer-list>

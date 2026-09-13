@@ -35,7 +35,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         "/api/aquascope/events",
         "/api/settings",
     }
-    OPEN_PREFIXES = ("/css/", "/js/", "/api/auth/", "/api/aquascope/")
+    OPEN_PREFIXES = ("/css/", "/js/", "/api/auth/", "/api/aquascope/", "/api/tts/")
     # Internal paths — only accessible from localhost (agents, MCP, SDK)
     LOCALHOST_ONLY_PREFIXES = ("/api/agents/sdk/",)
     LOCALHOST_ONLY_PATHS = {"/api/capture/bookmark"}
@@ -67,7 +67,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return JSONResponse({"error": "unauthorized", "locked": True}, status_code=401)
 
 
-def create_app(database: Database, capture_worker=None, analysis_worker=None, embedder=None, audio_worker=None):
+def create_app(database: Database, capture_worker=None, analysis_worker=None, embedder=None, audio_worker=None, tts_engine=None):
     """Create and configure the FastAPI application."""
 
     app = FastAPI(title="ScreenMind", version="0.1.1")
@@ -95,8 +95,21 @@ def create_app(database: Database, capture_worker=None, analysis_worker=None, em
     elif embedder is False:
         embedder = None
 
+    # TTS engine is heavy and opt-in — only construct it if enabled, and never
+    # eagerly load the model (unlike the tiny embedder above); stay fully lazy
+    # until the first /api/tts/speak request.
+    if tts_engine is None and settings.tts_enabled:
+        try:
+            from screenmind.engine.tts_engine import IndicParlerTtsEngine
+            tts_engine = IndicParlerTtsEngine()
+        except Exception:
+            tts_engine = None
+            logger.warning("indic-parler-tts unavailable — server TTS disabled")
+    elif tts_engine is False:
+        tts_engine = None
+
     # Initialize shared dependencies for all route modules
-    deps.init(database, embedder, capture_worker, analysis_worker, audio_worker)
+    deps.init(database, embedder, capture_worker, analysis_worker, audio_worker, tts_engine)
 
     # ── Static Files ─────────────────────────────────────────────────
     static_dir = Path(__file__).parent / "static"
@@ -125,6 +138,7 @@ def create_app(database: Database, capture_worker=None, analysis_worker=None, em
     from screenmind.api.routes.data import router as data_router
     from screenmind.api.routes.memos import router as memos_router
     from screenmind.api.routes.aquascope import router as aquascope_router
+    from screenmind.api.routes.tts import router as tts_router
     app.include_router(auth_router)
     app.include_router(capture_router)
     app.include_router(timeline_router)
@@ -142,5 +156,6 @@ def create_app(database: Database, capture_worker=None, analysis_worker=None, em
     app.include_router(data_router)
     app.include_router(memos_router)
     app.include_router(aquascope_router)
+    app.include_router(tts_router)
 
     return app

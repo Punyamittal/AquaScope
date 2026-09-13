@@ -34,6 +34,15 @@ keyring>=25.0
 sentence-transformers==3.3.1
 easyocr==1.7.2
 
+# ── Optional: TTS (install with `pip install screenmind[tts]`) ──
+# Hindi/Hinglish server-side voice via AI4Bharat indic-parler-tts (Apache-2.0).
+# Heavy: pulls torch + transformers (~2-3 GB) if not already present via the
+# `ai` extra above. Disabled by default (config.tts_enabled=False).
+torch>=2.1,<3.0
+transformers>=4.46,<5.0
+soundfile>=0.12,<1.0
+parler-tts @ git+https://github.com/huggingface/parler-tts.git
+
 # ── Optional: Windows Accessibility ──
 uiautomation==2.0.18 ; sys_platform == "win32"
 

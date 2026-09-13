@@ -23,9 +23,35 @@ class SkillToolRunner(context: Context) {
             "wikipedia" -> wikipedia(question)
             "hash" -> hash(question)
             "email" -> email(question)
+            "app_action" -> appAction(question)
             else -> null
         }
     }
+
+    /** Lets the assistant act like a real agent: open a screen inside the app on request. */
+    private fun appAction(question: String): String {
+        val q = question.lowercase(Locale.US)
+        val (label, cls) = when {
+            hasAny(q, "scan") -> "Scan" to "com.aquascope.ui.ScanActivity"
+            hasAny(q, "history") -> "History" to "com.aquascope.ui.HistoryActivity"
+            hasAny(q, "report") -> "Report" to "com.aquascope.ui.ReportActivity"
+            hasAny(q, "timeline") -> "Memory Timeline" to "com.aquascope.ui.MemoryTimelineActivity"
+            hasAny(q, "screenmind") -> "ScreenMind" to "com.aquascope.ui.ScreenMindActivity"
+            hasAny(q, "settings", "local model") -> "Settings" to "com.aquascope.ui.LocalModelActivity"
+            hasAny(q, "home") -> "Home" to "com.aquascope.ui.SmritiHomeActivity"
+            else -> return "I'm not sure which screen you mean — try \"open scan\", \"open history\", \"open timeline\", or \"open settings\"."
+        }
+        return try {
+            val intent = Intent().setClassName(app, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            app.startActivity(intent)
+            "Opened $label."
+        } catch (t: Throwable) {
+            Log.w(TAG, "app action failed", t)
+            "Couldn't open $label."
+        }
+    }
+
+    private fun hasAny(q: String, vararg needles: String): Boolean = needles.any { q.contains(it) }
 
     private fun wikipedia(question: String): String? {
         val topic = extractTopic(question) ?: return "No clear topic to look up."

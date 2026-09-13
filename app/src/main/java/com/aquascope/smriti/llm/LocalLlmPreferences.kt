@@ -23,7 +23,7 @@ class LocalLlmPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_TARGET_LANGUAGE, value).apply()
 
     var autoSpeak: Boolean
-        get() = prefs.getBoolean(KEY_AUTO_SPEAK, false)
+        get() = prefs.getBoolean(KEY_AUTO_SPEAK, true)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_SPEAK, value).apply()
 
     fun hasHfAccessToken(): Boolean = hfAccessToken.isNotBlank()

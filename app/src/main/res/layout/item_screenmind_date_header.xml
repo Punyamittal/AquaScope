@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Date group header row for ScreenMind timeline -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="4dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="4dp"
+    android:paddingBottom="8dp">
+
+    <!-- Left hairline -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1"
+        android:background="@color/hairline_dark" />
+
+    <!-- Date label -->
+    <TextView
+        android:id="@+id/textDateHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_glass_pill"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.14"
+        android:paddingStart="12dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="4dp"
+        android:textAllCaps="true"
+        android:textColor="@color/warm_faint"
+        android:textSize="10sp" />
+
+    <!-- Right hairline -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1"
+        android:background="@color/hairline_dark" />
+
+</LinearLayout>

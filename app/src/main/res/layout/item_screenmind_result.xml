@@ -1,68 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- ScreenMind result card — glassmorphism, rich category badge, structured details -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="10dp"
-    android:background="@drawable/bg_screenmind_card"
+    android:background="@drawable/bg_glass_card"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="16dp">
 
+    <!-- Row 1: Category badge + timestamp -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/textItemApp"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.08"
-            android:textColor="@color/cyan"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/textItemCategory"
+        <!-- Category badge (emoji + label) -->
+        <LinearLayout
+            android:id="@+id/layoutCategoryBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_ask_pill"
+            android:background="@drawable/bg_glass_pill"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
             android:paddingStart="8dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="2dp"
-            android:textColor="@color/amber"
-            android:textSize="10sp" />
+            android:paddingTop="3dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="3dp">
 
+            <TextView
+                android:id="@+id/textCategoryEmoji"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/textCategoryLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.06"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Timestamp -->
         <TextView
             android:id="@+id/textItemTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:fontFamily="sans-serif"
             android:textColor="@color/warm_faint"
-            android:textSize="11sp" />
+            android:textSize="10sp" />
     </LinearLayout>
 
+    <!-- Row 2: App name -->
+    <TextView
+        android:id="@+id/textItemApp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.04"
+        android:textColor="@color/warm_white"
+        android:textSize="14sp" />
+
+    <!-- Row 3: Summary -->
     <TextView
         android:id="@+id/textItemSummary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:lineSpacingExtra="3dp"
-        android:textColor="@color/warm_white"
+        android:layout_marginTop="5dp"
+        android:lineSpacingMultiplier="1.3"
+        android:textColor="@color/warm_muted"
         android:textSize="13sp" />
 
-    <TextView
-        android:id="@+id/textItemDetails"
+    <!-- Divider (only shown when expanded) -->
+    <View
+        android:id="@+id/dividerDetails"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:background="@color/glass_stroke_soft"
+        android:visibility="gone" />
+
+    <!-- Details panel (collapsible) -->
+    <LinearLayout
+        android:id="@+id/layoutDetails"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:background="#1200E5FF"
-        android:fontFamily="monospace"
-        android:lineSpacingExtra="2dp"
-        android:padding="8dp"
-        android:textColor="#CCF5F5F0"
-        android:textSize="11sp"
-        android:visibility="gone" />
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_glass_pill"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/textItemDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lineSpacingMultiplier="1.4"
+            android:textColor="@color/warm_muted"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Expand / collapse row -->
+    <LinearLayout
+        android:id="@+id/layoutExpandRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="end|center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/textExpandHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.06"
+            android:text="Details  ▼"
+            android:textColor="@color/cyan"
+            android:textSize="11sp" />
+    </LinearLayout>
+
 </LinearLayout>

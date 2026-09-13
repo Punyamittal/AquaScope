@@ -17,6 +17,7 @@ import java.util.Locale
 object GroundedPromptBuilder {
 
     private val fmt = SimpleDateFormat("d MMM yyyy, h:mm a", Locale.US)
+    private val currentDateTimeFmt = SimpleDateFormat("EEEE, d MMM yyyy, h:mm a", Locale.US)
 
     fun detectLanguage(question: String, selectedPref: String = "auto"): String {
         if (selectedPref.isNotBlank() && selectedPref.lowercase() != "auto") {
@@ -55,15 +56,13 @@ $langRule
 
 $examples
 
-HARD RULES:
-- Use ONLY facts in CANONICAL_ANSWER, MEMORY_EVENTS, and SCREEN_OCR${if (skillMatch?.toolResult != null) " and SKILL_TOOL_RESULT" else ""}.
-- Do NOT invent leaks, timestamps, scores, locations, or confirmations.
-- If EVIDENCE_STATE is UNKNOWN and SCREEN_OCR / MEMORY_EVENTS are empty, say you don't have that record.
-- Never say a leak is confirmed unless CANONICAL_ANSWER already says so.
-- When the user asks what was on screen / in a recording, answer from SCREEN_OCR and MEMORY_EVENTS text.
-- Keep under 120 words. Plain conversational sentences. No markdown. No "Sure" or "Hello".
-- Do not repeat internal labels such as EVIDENCE_STATE, CANONICAL_ANSWER, MEMORY_EVENTS, SCREEN_OCR, file paths, or RMS numbers.
-- If ACTIVE_SKILL is present, follow its instructions when they do not conflict with the hard rules above.
+Speak naturally and conversationally, like a knowledgeable assistant — elaborate, explain, add helpful general context or advice where it fits. Don't just restate the facts tersely.
+
+SAFETY RULE (the only hard constraint):
+- Never say a leak is confirmed, and never state a specific anomaly score, timestamp, or event that contradicts CANONICAL_ANSWER / MEMORY_EVENTS, unless CANONICAL_ANSWER already says so. Everything else is fair game — use your own words, general knowledge, and judgment freely.
+- Use CURRENT_DATE_TIME below for anything involving today's date, current time, or "how long ago" — never guess or make one up.
+- Do not repeat internal labels such as CURRENT_DATE_TIME, EVIDENCE_STATE, CANONICAL_ANSWER, MEMORY_EVENTS, SCREEN_OCR, file paths, or RMS numbers.
+- If ACTIVE_SKILL is present, follow its instructions when they do not conflict with the safety rule above.
 
 USER_QUESTION: $question
 
@@ -105,22 +104,21 @@ ANSWER:
 
         return """
 You are SMRITI, an on-device home memory assistant.
-Answer USER_QUESTION using ONLY the facts below (CANONICAL_ANSWER + MEMORY_EVENTS + SCREEN_OCR${if (skillMatch?.toolResult != null) " + SKILL_TOOL_RESULT" else ""}).
+Answer USER_QUESTION, grounded in the facts below (CANONICAL_ANSWER + MEMORY_EVENTS + SCREEN_OCR${if (skillMatch?.toolResult != null) " + SKILL_TOOL_RESULT" else ""}) but not limited to reciting them.
 
 TARGET LANGUAGE: $target
 $langRule
 
 $examples
 
-HARD RULES:
-- Stay faithful to those facts. Do not invent events, leaks, times, places, or scores.
-- Prefer SCREEN_OCR first. If SCREEN_OCR names an app/game, that is the answer for "what game/app" questions — ignore unrelated MEMORY_EVENTS.
-- Do not answer from general knowledge or Wikipedia when SCREEN_OCR is present.
-- If facts are insufficient or EVIDENCE_STATE is UNKNOWN and there is no SCREEN_OCR / MEMORY text, say you don't have that in memory yet and suggest Capture → Stop or a more specific question — unless SKILL_TOOL_RESULT has the answer.
-- Never claim a confirmed leak unless CANONICAL_ANSWER already does.
-- Be concise (under 120 words). Spoken sentences only. No markdown. No "As an AI".
-- Do not repeat internal labels such as EVIDENCE_STATE, CANONICAL_ANSWER, MEMORY_EVENTS, SCREEN_OCR, file paths, or RMS numbers.
-- If ACTIVE_SKILL is present, follow its instructions when they do not conflict with the hard rules above.
+Speak naturally and conversationally — elaborate, explain, add helpful general knowledge or advice where it fits, like a real assistant would. If SCREEN_OCR names an app/game, that's the answer for "what game/app" questions.
+
+SAFETY RULE (the only hard constraint):
+- Never claim a confirmed leak, and never state a specific anomaly score, time, or event that contradicts CANONICAL_ANSWER / MEMORY_EVENTS, unless CANONICAL_ANSWER already does. Everything else is fair game.
+- If facts are genuinely insufficient (EVIDENCE_STATE is UNKNOWN and there is no SCREEN_OCR / MEMORY text), say you don't have that in memory yet — unless SKILL_TOOL_RESULT has the answer.
+- Use CURRENT_DATE_TIME below for anything involving today's date, current time, or "how long ago" — never guess or make one up.
+- Do not repeat internal labels such as CURRENT_DATE_TIME, EVIDENCE_STATE, CANONICAL_ANSWER, MEMORY_EVENTS, SCREEN_OCR, file paths, or RMS numbers.
+- If ACTIVE_SKILL is present, follow its instructions when they do not conflict with the safety rule above.
 
 USER_QUESTION: $question
 
@@ -218,6 +216,7 @@ Answer: Kitchen me raat ko 74% abnormal sound dekha gaya hai. Abhi koi pakka lea
             else -> ruleAnswer.evidenceState.name
         }
 
+        appendLine("CURRENT_DATE_TIME: ${currentDateTimeFmt.format(Date())}")
         appendLine("EVIDENCE_STATE: $stateTranslated")
         appendLine("CANONICAL_ANSWER:")
         appendLine(ruleAnswer.text.trim())

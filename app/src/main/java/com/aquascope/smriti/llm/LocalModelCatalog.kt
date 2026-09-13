@@ -54,6 +54,26 @@ object LocalModelCatalog {
     )
 
     /**
+     * Gemma 4 E4B — real MediaPipe .task build (same repo as the .litertlm files, just the
+     * "web" variant, which MediaPipe's LlmInference can load directly today). Use THIS one
+     * for on-device Ask chat — the .litertlm entries below cannot be loaded until this app
+     * integrates a separate LiteRT-LM runtime (blocked on a Kotlin 1.9 -> 2.x bump).
+     */
+    val gemma4_e4b_task = Entry(
+        id = "gemma4-e4b-it-web-task",
+        displayName = "Gemma 4 E4B (MediaPipe .task)",
+        fileName = "gemma-4-E4B-it-web.task",
+        approxRamGb = 4.5,
+        notes = "Stronger chat model than Qwen/Gemma 3 1B — runs directly in MediaPipe, no extra runtime needed. ~3 GB download, slower per-token than the 1.5-2B models.",
+        downloadHint = "Hugging Face: litert-community / gemma-4-E4B-it-litert-lm (web .task build)",
+        downloadUrl = "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it-web.task?download=true",
+        licenseUrl = "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm",
+        sizeBytes = 2_960_000_000L,
+        requiresAccessToken = true,
+        runtime = RuntimeKind.MEDIAPIPE
+    )
+
+    /**
      * Gemma 4 E4B via LiteRT-LM (.litertlm). Stronger than Gemma 3; gated on Hugging Face.
      * Prefer GPU build on Snapdragon 8 Elite.
      */
@@ -131,7 +151,7 @@ object LocalModelCatalog {
         runtime = RuntimeKind.SPEECH
     )
 
-    val recommended = listOf(gemma4_e4b, gemma4_e4b_full, gemma3_1b, qwen25_15b, gemma2_2b, whisperTiny)
+    val recommended = listOf(gemma4_e4b_task, gemma4_e4b, gemma4_e4b_full, gemma3_1b, qwen25_15b, gemma2_2b, whisperTiny)
 
     val downloadable: List<Entry> = recommended.filter { it.canDownload }
 
@@ -142,6 +162,7 @@ object LocalModelCatalog {
     const val HF_TOKEN_URL = "https://huggingface.co/settings/tokens"
 
     fun preferredFileNames(): List<String> = listOf(
+        gemma4_e4b_task.fileName,
         gemma4_e4b.fileName,
         gemma4_e4b_full.fileName,
         "gemma-4-E2B-it.litertlm",

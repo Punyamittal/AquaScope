@@ -6,13 +6,17 @@ import com.aquascope.smriti.model.SmritiAnswer
 import com.aquascope.smriti.skills.SkillMatch
 
 /**
- * Rules are the source of truth. Local LLM rephrases or answers free-form from grounded facts.
+ * Rules compute the evidence state (UNKNOWN/OBSERVED/POSSIBLE/CONFIRMED). The local LLM
+ * (and, for Hindi/Hinglish, Sarvam on top) is free to phrase, elaborate, and draw on
+ * general knowledge — the only hard constraint is that it can never claim a confirmed
+ * leak, or a specific reading, that the rules didn't already establish.
  * Edge Gallery–style skills may inject instructions / tool results.
  * Multilingual fallback ensures natural responses in Hindi/Hinglish when LLM is absent or fallback needed.
  */
 class SmritiAnswerComposer(
     private val llm: LocalLlmEngine?,
-    private val prefs: LocalLlmPreferences
+    private val prefs: LocalLlmPreferences,
+    private val sarvamClient: SarvamClient? = null
 ) {
 
     fun compose(
@@ -71,12 +75,7 @@ class SmritiAnswerComposer(
         }
 
         val cleaned = AskAnswerCleaner.cleanModelOutput(polished)
-        val screenQa = looksLikeScreenOrMemoryQa(question, cleanedRule)
         val hasScreenOcr = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr.isNotBlank()
-        // Never relax for Wikipedia / world tools when answering from a clip.
-        val relaxGrounding = skillMatch?.skill?.id == "kitchen-adventure" ||
-            (skillMatch?.skill?.tool != null && skillMatch.skill.id != "query-wikipedia" && !hasScreenOcr) ||
-            (intent == QueryIntent.GENERAL && !screenQa && !hasScreenOcr)
 
         if (cleaned.isBlank() || AskAnswerCleaner.looksLikePromptLeak(cleaned)) {
             return if (!skillMatch?.toolResult.isNullOrBlank() && !hasScreenOcr) {
@@ -90,22 +89,28 @@ class SmritiAnswerComposer(
             }
         }
 
-        if (!relaxGrounding && !passesGroundingCheck(cleaned, cleanedRule, intent)) {
+        // The only hard constraint left: never let the model claim a confirmed leak
+        // (or a specific reading) that the rule engine's evidence doesn't support.
+        // Everything else — phrasing, elaboration, general knowledge — is unrestricted.
+        if (!passesLeakSafetyCheck(cleaned, cleanedRule)) {
             return cleanedRule.copy(usedLocalModel = false, modelName = null)
         }
 
-        // Soft leak check still applies for relaxed GENERAL.
-        if (relaxGrounding && !passesGroundingCheck(cleaned, cleanedRule, QueryIntent.GENERAL)) {
-            return cleanedRule.copy(usedLocalModel = false, modelName = null)
-        }
-
-        // Screen answers must overlap the latest clip / rule text — otherwise keep the rule dump.
-        if ((screenQa || hasScreenOcr) && !overlapsScreenFacts(cleaned, cleanedRule)) {
-            return cleanedRule.copy(usedLocalModel = false, modelName = null)
+        // Qwen already produced a valid answer at this point. For Indian languages,
+        // layer one more pass on top: ask Sarvam AI to rewrite it more naturally.
+        // Never a reasoning step — falls back to Qwen's own text on any failure
+        // (no key, network error, empty reply).
+        val finalText = if (target in SarvamPreferences.INDIAN_LANGUAGE_TARGETS && sarvamClient != null) {
+            sarvamClient.rewrite(question, cleaned, target)
+                ?.let { AskAnswerCleaner.cleanForDisplay(it) }
+                ?.takeIf { it.isNotBlank() }
+                ?: cleaned
+        } else {
+            cleaned
         }
 
         return cleanedRule.copy(
-            text = cleaned,
+            text = finalText,
             usedLocalModel = true,
             modelName = llm.modelLabel
         )
@@ -134,66 +139,12 @@ class SmritiAnswerComposer(
     }
 
     companion object {
-        private fun looksLikeScreenOrMemoryQa(question: String, ruleAnswer: SmritiAnswer): Boolean {
-            val q = question.lowercase()
-            if (q.contains("screen") || q.contains("clip") || q.contains("recording") ||
-                q.contains("ocr") || q.contains("what was") || q.contains("what did") ||
-                q.contains("what game") || q.contains("which game") ||
-                (q.contains("game") && q.contains("open"))
-            ) {
-                return true
-            }
-            return ruleAnswer.relatedEvents.any {
-                it.source.equals("SMRITI_PLAY", true) ||
-                    it.source.equals("SCREENMIND", true) ||
-                    it.source.equals("OCR", true) ||
-                    it.source.equals("NEURAL_CORE", true) ||
-                    it.summary.contains("Seen on screen", ignoreCase = true) ||
-                    it.summary.contains("ScreenMind", ignoreCase = true) ||
-                    it.summary.contains("Game/App opened", ignoreCase = true)
-            }
-        }
-
-        /** Require at least one token from SCREEN_OCR / related screen summaries. */
-        private fun overlapsScreenFacts(modelText: String, ruleAnswer: SmritiAnswer): Boolean {
-            val ocr = com.aquascope.smriti.brain.NeuralCoreSession.lastScreenOcr
-            val hay = buildString {
-                append(ocr)
-                append('\n')
-                append(ruleAnswer.text)
-                ruleAnswer.relatedEvents.forEach { append('\n').append(it.summary) }
-            }.lowercase()
-            if (hay.isBlank()) return true
-            val tokens = Regex("[a-z0-9]{3,}")
-                .findAll(modelText.lowercase())
-                .map { it.value }
-                .filterNot {
-                    it in setOf(
-                        "the", "and", "you", "your", "from", "with", "that", "this", "have",
-                        "was", "were", "are", "for", "not", "did", "what", "game", "app",
-                        "opened", "screen", "clip", "memory", "latest", "recording"
-                    )
-                }
-                .distinct()
-                .take(24)
-                .toList()
-            if (tokens.isEmpty()) return true
-            val hits = tokens.count { hay.contains(it) }
-            // If OCR names an app (e.g. BGMI), at least one distinctive token should appear.
-            return hits >= 1 || modelText.lowercase().contains("don't have") ||
-                modelText.lowercase().contains("do not have") ||
-                modelText.lowercase().contains("no record")
-        }
-
         /**
-         * Soft guard: reject answers that assert confirmation when evidence is weaker,
-         * or invent "confirmed leak" language the rules never used.
+         * The one hard safety constraint: reject answers that assert a confirmed leak,
+         * or invent "confirmed leak" language, the rules never established. Everything
+         * else (length, phrasing, elaboration, general knowledge) is unrestricted.
          */
-        fun passesGroundingCheck(
-            modelText: String,
-            ruleAnswer: SmritiAnswer,
-            intent: QueryIntent = QueryIntent.GENERAL
-        ): Boolean {
+        fun passesLeakSafetyCheck(modelText: String, ruleAnswer: SmritiAnswer): Boolean {
             val t = modelText.lowercase()
             if (t.isBlank()) return false
             if (AskAnswerCleaner.looksLikePromptLeak(modelText)) return false
@@ -203,16 +154,7 @@ class SmritiAnswerComposer(
                 ruleAnswer.evidenceState == EvidenceState.CONFIRMED ||
                     positiveLeakClaim(ruleAnswer.text.lowercase())
 
-            if (modelClaimsConfirmedLeak && !rulesAllowConfirmed) return false
-
-            val maxLen = if (intent == QueryIntent.GENERAL) {
-                1_200
-            } else {
-                maxOf(ruleAnswer.text.length * 5 + 280, 720)
-            }
-            if (modelText.length > maxLen) return false
-
-            return true
+            return !(modelClaimsConfirmedLeak && !rulesAllowConfirmed)
         }
 
         /** True only for affirmative leak confirmation language (ignores "not confirmed"). */

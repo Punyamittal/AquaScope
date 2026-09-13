@@ -182,6 +182,7 @@ class LocalModelActivity : SmritiScreenActivity() {
 
         bindOllamaControls()
         bindScreenMindControls()
+        bindSarvamControls()
 
         inflateDownloadCards()
         inflateSkillToggles()
@@ -685,6 +686,15 @@ class LocalModelActivity : SmritiScreenActivity() {
         binding.switchScreenMind.isChecked = prefs.enabled
         binding.switchScreenMindPc.isChecked = prefs.pcEnabled
         binding.inputScreenMindPcUrl.setText(prefs.pcBaseUrl)
+        binding.switchScreenMindTts.isChecked = prefs.ttsEnabled
+        binding.switchScreenMindTts.setOnCheckedChangeListener { _, checked ->
+            prefs.ttsEnabled = checked
+            Toast.makeText(
+                this,
+                if (checked) "Hindi/Hinglish replies will use PC voice when reachable" else "Hindi/Hinglish replies use the phone's built-in voice",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
         binding.switchScreenMind.setOnCheckedChangeListener { _, checked ->
             prefs.enabled = checked
             Toast.makeText(
@@ -708,6 +718,49 @@ class LocalModelActivity : SmritiScreenActivity() {
                 prefs.pcBaseUrl = binding.inputScreenMindPcUrl.text?.toString().orEmpty()
                 binding.inputScreenMindPcUrl.setText(prefs.pcBaseUrl)
             }
+        }
+    }
+
+    private fun bindSarvamControls() {
+        val prefs = com.aquascope.smriti.llm.SarvamPreferences(this)
+        binding.switchSarvam.isChecked = prefs.enabled
+        refreshSarvamStatus(prefs)
+        binding.switchSarvam.setOnCheckedChangeListener { _, checked ->
+            prefs.enabled = checked
+            refreshSarvamStatus(prefs)
+        }
+        binding.btnSarvamApiKey.setOnClickListener {
+            val pad = (20 * resources.displayMetrics.density).toInt()
+            val input = android.widget.EditText(this).apply {
+                hint = getString(R.string.sarvam_key_hint)
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                    android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                setPadding(pad, pad, pad, pad)
+                setText(prefs.apiKey)
+            }
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.sarvam_set_key)
+                .setView(input)
+                .setPositiveButton(R.string.local_model_save_token) { _, _ ->
+                    val key = input.text?.toString()?.trim().orEmpty()
+                    if (key.isBlank()) {
+                        Toast.makeText(this, R.string.sarvam_key_empty_toast, Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
+                    prefs.apiKey = key
+                    refreshSarvamStatus(prefs)
+                    Toast.makeText(this, R.string.sarvam_key_saved_toast, Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun refreshSarvamStatus(prefs: com.aquascope.smriti.llm.SarvamPreferences) {
+        binding.textSarvamStatus.text = if (prefs.hasApiKey()) {
+            getString(R.string.sarvam_key_status_saved, prefs.maskedKey())
+        } else {
+            getString(R.string.sarvam_key_status_none)
         }
     }
 

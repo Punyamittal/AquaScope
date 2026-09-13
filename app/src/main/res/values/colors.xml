@@ -21,6 +21,31 @@
     <color name="overlay_panel">#CC0C2A43</color>
     <color name="nav_idle">#66F5F5F0</color>
 
+    <!-- ── Glassmorphism tokens ─────────────────────────────────── -->
+    <!-- Base deep: near-black for gradient root -->
+    <color name="bg_deep">#040E1A</color>
+    <!-- Purple depth node in background gradient -->
+    <color name="purple_glow">#6C3FBF</color>
+    <!-- Glass card fill: 15% white translucent -->
+    <color name="glass_panel">#26FFFFFF</color>
+    <!-- Glass card elevated fill: 20% white -->
+    <color name="glass_elevated">#33FFFFFF</color>
+    <!-- Frosted glass border -->
+    <color name="glass_stroke">#40FFFFFF</color>
+    <!-- Glass stroke soft (nav, secondary panels) -->
+    <color name="glass_stroke_soft">#26FFFFFF</color>
+    <!-- Nav bar: 70% navy dark glass -->
+    <color name="glass_nav">#B3071A2B</color>
+    <!-- Nav top border line -->
+    <color name="glass_nav_border">#33FFFFFF</color>
+    <!-- Cyan glow behind glass panels -->
+    <color name="glow_cyan">#554AAFC2</color>
+    <!-- Amber glow accent -->
+    <color name="glow_amber">#55D99A3A</color>
+    <!-- Inner shimmer highlight (top edge of glass) -->
+    <color name="glass_shimmer">#20FFFFFF</color>
+    <!-- ──────────────────────────────────────────────────────────── -->
+
     <!-- System aliases used across layouts -->
     <color name="sys_bg">@color/navy_deep</color>
     <color name="sys_surface">@color/navy</color>

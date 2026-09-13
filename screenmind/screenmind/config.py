@@ -74,6 +74,7 @@ _ALLOWED_OVERRIDES = {
     "auto_pause_heavy_apps", "heavy_apps",
     "defer_analysis", "meeting_transcription",
     "meeting_apps",
+    "tts_enabled",
     "active_model", "model_variants", "retention_days",
     "obsidian_enabled", "obsidian_vault_path",
     "notion_enabled", "notion_token", "notion_database_id",
@@ -227,6 +228,16 @@ class Settings(BaseSettings):
     meeting_apps: str = Field(
         default="zoom,teams,meet,webex,slack,discord",
         description="Comma-separated app substrings that indicate a meeting",
+    )
+
+    # ── Text-to-Speech ───────────────────────────────────────────────────
+    tts_enabled: bool = Field(
+        default=False,
+        description=(
+            "Enable server-side Hindi/Hinglish voice replies for the AquaScope Android app "
+            "via AI4Bharat indic-parler-tts. Heavy model (PyTorch/transformers), competes with "
+            "llama-server for GPU/CPU, and is slow without a GPU — opt-in only."
+        ),
     )
     # ── Integrations ─────────────────────────────────────────────────────
     obsidian_enabled: bool = Field(default=False, description="Auto-export summaries to Obsidian vault")

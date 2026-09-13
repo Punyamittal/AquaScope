@@ -39,13 +39,23 @@ object SkillMatcher {
                 val screenish = hasAny(
                     q, "screen", "clip", "recording", "game", "app opened", "on my phone", "ocr"
                 )
-                if (!screenish && hasAny(q, "who is", "what is", "wikipedia", "tell me about", "history of")) {
+                // "what is 2+3" / "what is the time" etc. are not encyclopedia lookups —
+                // require an explicit Wikipedia mention, or "who is"/"tell me about"/"history of"
+                // followed by something that looks like a proper subject (letters), not digits/math.
+                val looksLikeSubjectQuery = Regex("""\b(who is|tell me about|history of)\s+[a-z]""").containsMatchIn(q)
+                if (!screenish && (q.contains("wikipedia") || looksLikeSubjectQuery)) {
                     s += 5
                 }
             }
             "calculate-hash" -> if (hasAny(q, "hash", "sha256", "sha-256", "checksum")) s += 10
             "send-email" -> if (hasAny(q, "email", "send mail", "compose mail", "e-mail")) s += 10
             "kitchen-adventure" -> if (hasAny(q, "adventure", "dungeon", "quest")) s += 4
+            "app-control" -> if (hasAny(
+                    q, "open scan", "start scan", "new scan", "open history", "open report",
+                    "open timeline", "memory timeline", "open settings", "open screenmind",
+                    "go home", "open home", "take me to", "go to the"
+                )
+            ) s += 8
         }
         return s
     }

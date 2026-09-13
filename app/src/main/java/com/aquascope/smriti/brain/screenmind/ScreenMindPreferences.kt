@@ -31,11 +31,23 @@ class ScreenMindPreferences(context: Context) {
             prefs.edit().putString(KEY_PC_URL, normalizeBaseUrl(value)).commit()
         }
 
+    /**
+     * Server-side Hindi/Hinglish voice (indic-parler-tts) via the same PC backend.
+     * Independent of [pcEnabled] so users can keep PC search/chat but skip the
+     * slower TTS path — both must be on for network TTS to be attempted.
+     */
+    var ttsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_TTS_ENABLED, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_TTS_ENABLED, value).commit()
+        }
+
     companion object {
         private const val PREFS = "smriti_screenmind"
         private const val KEY_ENABLED = "enabled"
         private const val KEY_PC_ENABLED = "pc_enabled"
         private const val KEY_PC_URL = "pc_base_url"
+        private const val KEY_TTS_ENABLED = "tts_enabled"
 
         const val DEFAULT_PC_URL = "http://192.168.1.10:7777"
 

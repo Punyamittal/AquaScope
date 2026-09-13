@@ -3,20 +3,20 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/navy_deep"
+    android:background="@drawable/bg_gradient_deep"
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
-    <!-- Top App Bar & Monster Halo Header -->
+    <!-- ── Header ─────────────────────────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="20dp"
-        android:paddingTop="16dp"
+        android:paddingTop="20dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="10dp">
+        android:paddingBottom="12dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -31,19 +31,18 @@
                 android:letterSpacing="0.22"
                 android:text="SCREENMIND"
                 android:textColor="@color/warm_white"
-                android:textSize="22sp" />
+                android:textSize="24sp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:letterSpacing="0.14"
-                android:text="ON-DEVICE AI MEMORY · SNAPDRAGON 8 ELITE"
+                android:text="ON-DEVICE AI MEMORY"
                 android:textColor="@color/cyan"
-                android:textSize="11sp" />
+                android:textSize="10sp" />
         </LinearLayout>
 
-        <!-- Monster Halo Indicator -->
         <com.aquascope.ui.HaloIndicatorView
             android:id="@+id/haloIndicator"
             android:layout_width="36dp"
@@ -51,14 +50,14 @@
             android:alpha="0.85" />
     </LinearLayout>
 
-    <!-- On-Device Neural Engine Status & Actions Card -->
+    <!-- ── Neural Engine Status Card ──────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="10dp"
-        android:background="@drawable/bg_screenmind_card"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_glass_card"
         android:orientation="vertical"
         android:padding="14dp">
 
@@ -74,7 +73,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.10"
+                android:letterSpacing="0.06"
                 android:text="● ON-DEVICE NEURAL BRAIN: ACTIVE"
                 android:textColor="@color/cyan"
                 android:textSize="12sp" />
@@ -83,11 +82,11 @@
                 android:id="@+id/textModeBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_ask_pill"
-                android:paddingStart="8dp"
-                android:paddingTop="2dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="2dp"
+                android:background="@drawable/bg_glass_pill"
+                android:paddingStart="10dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="3dp"
                 android:text="100% OFFLINE"
                 android:textColor="@color/amber"
                 android:textSize="10sp" />
@@ -97,16 +96,16 @@
             android:id="@+id/textEngineDetail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
-            android:text="Snapdragon 8 Elite NPU · Local ML Kit OCR · Offline SQLite FTS5 · Zero PC Needed"
+            android:layout_marginTop="4dp"
+            android:text="Snapdragon 8 Elite NPU · ML Kit OCR · SQLite FTS5 · Zero PC Needed"
             android:textColor="@color/warm_faint"
             android:textSize="10sp" />
 
-        <!-- Quick Actions Row -->
+        <!-- Action buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="12dp"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
@@ -115,17 +114,17 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="📸 Capture Screen"
+                android:text="📸 Capture"
                 android:textSize="11sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSyncScans"
-                style="@style/Widget.AquaScope.Button.Ghost"
+                style="@style/Widget.AquaScope.Button.Secondary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="🔄 Sync Sensors"
+                android:text="🔄 Sync"
                 android:textSize="11sp" />
 
             <com.google.android.material.button.MaterialButton
@@ -134,31 +133,32 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
-                android:text="✨ Demo"
-                android:textSize="11sp" />
+                android:text="✨"
+                android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Query & Chat Input Bar -->
+    <!-- ── Search + Ask row ───────────────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="10dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/inputQuery"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
-            android:background="@drawable/bg_input_outline"
-            android:hint="Search screen memory or ask AI…"
+            android:background="@drawable/bg_glass_input"
+            android:hint="Search memory or ask AI…"
             android:imeOptions="actionSearch"
             android:inputType="text"
-            android:padding="10dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             android:singleLine="true"
             android:textColor="@color/warm_white"
             android:textColorHint="@color/warm_faint"
@@ -169,39 +169,64 @@
             style="@style/Widget.AquaScope.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="Search" />
+            android:layout_marginStart="8dp"
+            android:minWidth="0dp"
+            android:text="Search"
+            android:textSize="12sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAskDesktop"
             style="@style/Widget.AquaScope.Button.Ghost"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="Ask AI" />
+            android:layout_marginStart="4dp"
+            android:minWidth="0dp"
+            android:text="Ask AI"
+            android:textSize="12sp" />
     </LinearLayout>
 
-    <!-- Filter Row -->
+    <!-- ── Category Summary Strip ─────────────────────────────── -->
+    <HorizontalScrollView
+        android:id="@+id/scrollCategorySummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/layoutCategorySummary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <!-- ── Filter Chips ───────────────────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="10dp"
         android:orientation="horizontal">
 
         <TextView
             android:id="@+id/chipFilterAll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_ask_pill"
+            android:background="@drawable/bg_glass_card_elevated"
             android:clickable="true"
             android:focusable="true"
-            android:paddingStart="12dp"
-            android:paddingTop="5dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="5dp"
-            android:text="ALL"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.08"
+            android:paddingStart="14dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="6dp"
+            android:text="All"
             android:textColor="@color/cyan"
             android:textSize="11sp" />
 
@@ -210,14 +235,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:background="@drawable/bg_ask_pill"
+            android:background="@drawable/bg_glass_pill"
             android:clickable="true"
             android:focusable="true"
-            android:paddingStart="12dp"
-            android:paddingTop="5dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="5dp"
-            android:text="SCREEN OCR"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.08"
+            android:paddingStart="14dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="6dp"
+            android:text="🌊 Screen"
             android:textColor="@color/warm_faint"
             android:textSize="11sp" />
 
@@ -226,25 +253,25 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:background="@drawable/bg_ask_pill"
+            android:background="@drawable/bg_glass_pill"
             android:clickable="true"
             android:focusable="true"
-            android:paddingStart="12dp"
-            android:paddingTop="5dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="5dp"
-            android:text="ACOUSTIC SCANS"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.08"
+            android:paddingStart="14dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="6dp"
+            android:text="📡 Acoustic"
             android:textColor="@color/warm_faint"
             android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Content / Results Area -->
+    <!-- ── Results Area ───────────────────────────────────────── -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
+        android:layout_weight="1">
 
         <ProgressBar
             android:id="@+id/progressLoading"
@@ -254,43 +281,67 @@
             android:indeterminateTint="@color/cyan"
             android:visibility="gone" />
 
-        <TextView
-            android:id="@+id/textEmpty"
+        <!-- Empty state -->
+        <LinearLayout
+            android:id="@+id/layoutEmpty"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:gravity="center"
-            android:lineSpacingExtra="4dp"
-            android:text="No screen memory recorded yet.\nTap '📸 Capture Screen' or '✨ Demo' to generate episodes."
-            android:textColor="@color/warm_faint"
-            android:textSize="13sp" />
+            android:orientation="vertical"
+            android:paddingStart="32dp"
+            android:paddingEnd="32dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📋"
+                android:textSize="42sp" />
+
+            <TextView
+                android:id="@+id/textEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.4"
+                android:text="No screen memory recorded yet.\nTap 📸 Capture or ✨ Demo to begin."
+                android:textColor="@color/warm_faint"
+                android:textSize="13sp" />
+        </LinearLayout>
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerResults"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
+            android:paddingStart="16dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="16dp"
             android:paddingBottom="16dp"
             android:visibility="gone" />
     </FrameLayout>
 
-    <!-- Optional Developer PC Sync (Collapsed by Default) -->
+    <!-- ── Dev Sync (collapsed) ───────────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#0AFFFFFF"
+        android:background="@color/glass_nav"
         android:orientation="vertical"
         android:paddingStart="16dp"
-        android:paddingTop="6dp"
+        android:paddingTop="8dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="6dp">
+        android:paddingBottom="8dp">
 
         <TextView
             android:id="@+id/btnToggleDevSync"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:letterSpacing="0.08"
-            android:text="▶ Developer Network Sync (Optional PC Link)"
+            android:clickable="true"
+            android:focusable="true"
+            android:letterSpacing="0.06"
+            android:text="▶ Developer PC Link (optional)"
             android:textColor="@color/warm_faint"
             android:textSize="10sp" />
 
@@ -298,7 +349,7 @@
             android:id="@+id/layoutDevSync"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:visibility="gone">
@@ -308,7 +359,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@drawable/bg_input_outline"
+                android:background="@drawable/bg_glass_input"
                 android:hint="http://192.168.1.100:7777"
                 android:padding="8dp"
                 android:singleLine="true"
@@ -329,10 +380,11 @@
                 android:id="@+id/textStatusIndicator"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="8dp"
                 android:text="OFFLINE"
                 android:textColor="@color/warm_faint"
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
+
 </LinearLayout>

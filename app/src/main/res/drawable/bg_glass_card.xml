@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Glassmorphism status card: elevated glass with cyan glow halo -->
+<!-- Glassmorphism card: 15% white frosted panel with luminous 1dp border -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Cyan glow drop shadow -->
+    <!-- Glow halo (slightly larger, behind everything) -->
     <item
-        android:bottom="-4dp"
-        android:left="-4dp"
-        android:right="-4dp"
-        android:top="-4dp">
+        android:bottom="-2dp"
+        android:left="-2dp"
+        android:right="-2dp"
+        android:top="-2dp">
         <shape android:shape="rectangle">
-            <solid android:color="#1A4AAFC2" />
-            <corners android:radius="30dp" />
+            <solid android:color="#0A4AAFC2" />
+            <corners android:radius="28dp" />
         </shape>
     </item>
     <!-- Glass fill -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/glass_elevated" />
+            <solid android:color="@color/glass_panel" />
             <corners android:radius="24dp" />
             <stroke
                 android:width="1dp"
                 android:color="@color/glass_stroke" />
         </shape>
     </item>
-    <!-- Top shimmer edge -->
+    <!-- Inner shimmer highlight at top edge -->
     <item
         android:bottom="22dp"
-        android:left="14dp"
-        android:right="14dp"
+        android:left="12dp"
+        android:right="12dp"
         android:top="0dp">
         <shape android:shape="rectangle">
-            <solid android:color="#22FFFFFF" />
+            <solid android:color="@color/glass_shimmer" />
             <corners
                 android:topLeftRadius="24dp"
                 android:topRightRadius="24dp" />

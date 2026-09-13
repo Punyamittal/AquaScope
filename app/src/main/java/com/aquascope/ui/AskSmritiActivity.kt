@@ -22,9 +22,14 @@ import com.aquascope.smriti.model.EvidenceState
 import com.aquascope.smriti.model.SmritiAnswer
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.aquascope.smriti.brain.screenmind.ScreenMindPreferences
+import com.aquascope.smriti.llm.GroundedPromptBuilder
+import com.aquascope.smriti.tts.IndicTtsClient
+import com.aquascope.smriti.tts.IndicTtsPlayer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 
 class AskSmritiActivity : SmritiScreenActivity() {
@@ -39,6 +44,10 @@ class AskSmritiActivity : SmritiScreenActivity() {
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private var isSpeaking = false
+
+    private val screenMindPrefs by lazy { ScreenMindPreferences(this) }
+    private val indicTtsClient by lazy { IndicTtsClient(screenMindPrefs) }
+    private val indicTtsPlayer by lazy { IndicTtsPlayer(this) }
 
     private val voiceLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -212,6 +221,13 @@ class AskSmritiActivity : SmritiScreenActivity() {
         if (smriti.llmPrefs.enabled && smriti.modelStore.findInstalled() != null && !smriti.isLocalLlmReady()) {
             Toast.makeText(this, "Loading local model… first answer may take a minute", Toast.LENGTH_SHORT).show()
         }
+        // On-device generation can take 15-20+ seconds — show something immediately
+        // so this doesn't look frozen while Qwen (and, for hi/hinglish, Sarvam) run.
+        showAnswerMode()
+        binding.textAsked.text = question
+        binding.textAnswer.text = "Thinking…"
+        binding.textEvidenceState.text = ""
+        binding.btnWhy.visibility = View.GONE
         lifecycleScope.launch {
             val answer = try {
                 withContext(Dispatchers.Default) {
@@ -325,6 +341,42 @@ class AskSmritiActivity : SmritiScreenActivity() {
     }
 
     private fun speakText(text: String) {
+        if (isSpeaking) {
+            // Works for both the network-TTS path and the Android engine.
+            indicTtsPlayer.stop()
+            tts?.stop()
+            isSpeaking = false
+            binding.btnSpeak.text = "🔊 Speak"
+            return
+        }
+        val configured = smriti.llmPrefs.targetLanguage.lowercase()
+        val target = if (configured == "auto") GroundedPromptBuilder.detectLanguage(text) else configured
+        val useIndicTts = target in com.aquascope.smriti.llm.SarvamPreferences.INDIAN_LANGUAGE_TARGETS &&
+            screenMindPrefs.pcEnabled && screenMindPrefs.ttsEnabled
+        if (useIndicTts) {
+            isSpeaking = true
+            binding.btnSpeak.text = "⏳ Synthesizing…"
+            lifecycleScope.launch {
+                val bytes = withTimeoutOrNull(20_000L) { indicTtsClient.speak(text, target) }
+                    ?.getOrNull()
+                if (bytes != null) {
+                    indicTtsPlayer.play(
+                        wavBytes = bytes,
+                        onStart = { isSpeaking = true; binding.btnSpeak.text = "⏹ Stop" },
+                        onDone = { isSpeaking = false; binding.btnSpeak.text = "🔊 Speak" },
+                        onError = { speakWithAndroidTts(text) }
+                    )
+                } else {
+                    speakWithAndroidTts(text)
+                }
+            }
+            return
+        }
+        speakWithAndroidTts(text)
+    }
+
+    /** Fallback / default path — Android's built-in TextToSpeech, unchanged from before. */
+    private fun speakWithAndroidTts(text: String) {
         val engine = tts ?: return
         if (!ttsReady) {
             Toast.makeText(this, "Speech engine loading...", Toast.LENGTH_SHORT).show()
@@ -431,6 +483,7 @@ class AskSmritiActivity : SmritiScreenActivity() {
             tts?.stop()
             tts?.shutdown()
         } catch (_: Exception) {}
+        indicTtsPlayer.stop()
         super.onDestroy()
     }
 

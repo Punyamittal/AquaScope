@@ -100,6 +100,17 @@
     <string name="screenmind_enable">ScreenMind on Neural Core</string>
     <string name="screenmind_pc_enable">Use PC ScreenMind server</string>
     <string name="screenmind_pc_url_hint">PC ScreenMind URL (e.g. http://192.168.1.10:7777)</string>
+    <string name="screenmind_tts_enable">Hindi/Hinglish voice via PC (indic-parler-tts)</string>
+
+    <string name="sarvam_section_title">SARVAM AI</string>
+    <string name="sarvam_section_subtitle">Rewrites Qwen\'s already-grounded answer into natural Hindi/Hinglish before it\'s shown. Only used for Indian-language replies — every other language keeps using Qwen as-is.</string>
+    <string name="sarvam_enable">Use Sarvam AI for Hindi/Hinglish replies</string>
+    <string name="sarvam_set_key">Set Sarvam API key</string>
+    <string name="sarvam_key_hint">Sarvam API key</string>
+    <string name="sarvam_key_status_saved">Sarvam key saved: %1$s</string>
+    <string name="sarvam_key_status_none">No Sarvam API key set</string>
+    <string name="sarvam_key_saved_toast">Sarvam API key saved</string>
+    <string name="sarvam_key_empty_toast">Enter a Sarvam API key first</string>
     <string name="ollama_base_url_hint">Ollama base URL (e.g. http://192.168.1.10:11434)</string>
     <string name="ollama_model_hint">Ollama translate model (default qwen2.5:1.5b)</string>
     <string name="ollama_model_picks_hint">Translate model picks. OCR uses Gemma 4 chips above — not the phone .task / .litertlm file.</string>

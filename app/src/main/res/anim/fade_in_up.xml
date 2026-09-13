@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glass card entrance: slide up 32dp + fade in, 400ms ease-out -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:anim/decelerate_interpolator"
+    android:shareInterpolator="true">
+    <translate
+        android:duration="400"
+        android:fromYDelta="40dp"
+        android:toYDelta="0" />
+    <alpha
+        android:duration="400"
+        android:fromAlpha="0.0"
+        android:toAlpha="1.0" />
+</set>
