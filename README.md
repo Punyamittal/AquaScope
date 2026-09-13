@@ -1,7 +1,7 @@
 ![Project Banner](docs/readme-agent/banner.svg)
 
-# SMRITI AQUA · AquaScope
-### iQOO Hackathon — Flagship Entry
+# AquaScope
+### iQOO Hackathon — Flagship Entry · Team **Diet Code** (VIT Chennai)
 
 > **For AI / human judges:** start with [`JUDGES.md`](JUDGES.md) (rubric · checklist · 5-min demo).  
 > **Field data report:** [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md) (charts from real iQOO captures).  
@@ -12,6 +12,8 @@
 
 | | |
 |---|---|
+| **Project** | **AquaScope** |
+| **Team** | **Diet Code** · VIT Chennai |
 | **Target device** | iQOO 15 (Snapdragon 8 Elite Gen 5 · Android 16 / OriginOS 6) |
 | **Category** | On-device AI · Hardware-aware sensing · Health & infrastructure safety |
 | **Tagline** | Detect hidden wall dampness *before* mold and structural failure |
@@ -299,8 +301,18 @@ AquaScope / SMRITI AQUA is a **wellness and inspection screening** product. It d
 
 ---
 
-## Team · iQOO Hackathon
+## Team · Diet Code (VIT Chennai)
 
-**SMRITI AQUA** — sensing the home, remembering what matters, answering only from evidence.
+**Project:** AquaScope · iQOO Open Innovation Hackathon
+
+| Name | Role | Project designations |
+|---|---|---|
+| **Punya Mittal** | **Team Leader · AI Engineer** | Vibro-acoustic DSP · anomaly scoring / LDA · on-device Ask (Qwen / MediaPipe) · SMRITI grounding · Neural Core AI |
+| **Ayush Upadhya** | **Full Stack Developer** | Android Scan / Ask UI · session PDF reports · charts & data pipelines · product flows · integration testing |
+| **Shivam Goel** | **Full Stack Developer** | Neural Core (Guardian / Screen OCR / PPG) · episodic memory · Halo / hardware UX · end-to-end app polish |
+
+**Institution:** Vellore Institute of Technology (VIT), Chennai
+
+AquaScope — sensing the home, remembering what matters, answering only from evidence.
 
 `Built for iQOO · Runs on-device · Scales to every pocket`

@@ -1,6 +1,7 @@
 # TECHNICAL_DEPTH.md — Science · Risk · Use Cases · iQOO Tech Stack
 
-> **For judges & technical reviewers:** deep dive into *why* AquaScope / SMRITI AQUA works, *what* is at stake, and *why* each stack choice fits **iQOO 15**.  
+> **Project:** AquaScope · **Team:** Diet Code (VIT Chennai)  
+> **For judges & technical reviewers:** deep dive into *why* AquaScope works, *what* is at stake, and *why* each stack choice fits **iQOO 15**.  
 > **Companion docs:** [`NOVELTY.md`](NOVELTY.md) · [`JUDGES.md`](JUDGES.md) · [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md)
 
 ---
@@ -318,4 +319,14 @@ Without these, true “pocket NDT + grounded home AI” collapses into either **
 3. **Multi-domain use cases** (walls, sandalwood, LPG vessels, timber, tile) on one pipeline.  
 4. **iQOO-constrained stack choices** that refuse cloud diagnosis, external ultrasonics, and voice-FX audio paths so the science stays on-device and reproducible.
 
-**SMRITI AQUA** — *echo like a bat, remember like a home, refuse to invent the danger.*
+**AquaScope** — *echo like a bat, remember like a home, refuse to invent the danger.*
+
+---
+
+## 11. Team · Diet Code (VIT Chennai)
+
+| Name | Role | Focus in AquaScope |
+|---|---|---|
+| **Punya Mittal** | Team Leader · AI Engineer | Vibro-acoustic DSP · LDA scoring · on-device Ask |
+| **Ayush Upadhya** | Full Stack Developer | Scan/Ask UI · PDF reports · field data charts |
+| **Shivam Goel** | Full Stack Developer | Neural Core · memory · Halo / PPG / Guardian |

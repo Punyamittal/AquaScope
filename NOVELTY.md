@@ -1,7 +1,7 @@
 # NOVELTY.md — Technical Novelty Statement
 
-> **Patent status:** No patent application has been filed as of September 2025.  
-> This document records **original contributions** in SMRITI AQUA / AquaScope for hackathon evaluation, prior-art disclosure, and future IP planning.
+> **Project:** AquaScope · **Team:** Diet Code (VIT Chennai) · **Patent status:** No patent application has been filed as of September 2025.  
+> This document records **original contributions** in AquaScope for hackathon evaluation, prior-art disclosure, and future IP planning.
 
 **Related:** [`README.md`](README.md) · [`JUDGES.md`](JUDGES.md) · [`TECHNICAL_DEPTH.md`](TECHNICAL_DEPTH.md) · [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md)
 
@@ -155,6 +155,14 @@ If pursuing patent or defensive publication, strongest claim themes:
 
 ## 8. Team statement
 
+**Project:** AquaScope · **Team:** Diet Code · **Institution:** VIT Chennai
+
+| Name | Role |
+|---|---|
+| **Punya Mittal** | Team Leader · AI Engineer (DSP · anomaly scoring · on-device Ask / SMRITI) |
+| **Ayush Upadhya** | Full Stack Developer (Scan/Ask UI · reports · data pipelines) |
+| **Shivam Goel** | Full Stack Developer (Neural Core · memory · Halo / hardware UX) |
+
 We believe the combination of **contact vibro-acoustic moisture teaching on a stock iQOO**, **field-trained on-device LDA weights**, and **evidence-grounded SMRITI memory with isolated Ask** constitutes a **novel integrated system** not found as a single consumer product in prior art — even where individual components are well known.
 
-**SMRITI AQUA** — *sense the structure, remember the evidence, answer without inventing.*
+**AquaScope** — *sense the structure, remember the evidence, answer without inventing.*

@@ -1,15 +1,22 @@
 # JUDGES.md — AI / Human Evaluation Brief (iQOO Hackathon)
 
-> **Read this first.** Structured so automated and human judges can score SMRITI AQUA / AquaScope in under 3 minutes.  
+> **Read this first.** Structured so automated and human judges can score **AquaScope** in under 3 minutes.  
 > **Charts & field report:** [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md)  
 > **Novelty statement:** [`NOVELTY.md`](NOVELTY.md) (no patent filed yet)  
 > **Technical depth:** [`TECHNICAL_DEPTH.md`](TECHNICAL_DEPTH.md) (ultrasonic/bat science · disease & collapse · stack vs alternatives)
+
+| | |
+|---|---|
+| **Project** | **AquaScope** |
+| **Team** | **Diet Code** · VIT Chennai |
+| **Team Leader** | Punya Mittal (AI Engineer) |
+| **Members** | Ayush Upadhya · Shivam Goel (Full Stack Developers) |
 
 ---
 
 ## 1. One-line verdict we want
 
-**Best iQOO-native project:** turns the phone into a **zero-hardware vibro-acoustic moisture scanner** + **on-device grounded home AI** (Ask / Guardian / PPG) — privacy-first, hardware-aware, demoable in 5 minutes.
+**Best iQOO-native project:** **AquaScope** turns the phone into a **zero-hardware vibro-acoustic moisture scanner** + **on-device grounded home AI** (Ask / Guardian / PPG) — privacy-first, hardware-aware, demoable in 5 minutes.
 
 ---
 
@@ -166,7 +173,17 @@ pie showData
 
 ---
 
-## 9. Regenerate charts
+## 9. Team · Diet Code (VIT Chennai)
+
+| Name | Designation | AquaScope ownership |
+|---|---|---|
+| **Punya Mittal** | Team Leader · AI Engineer | DSP · scorer · on-device LLM Ask · SMRITI grounding |
+| **Ayush Upadhya** | Full Stack Developer | Scan/Ask UI · PDF reports · data/chart pipelines |
+| **Shivam Goel** | Full Stack Developer | Neural Core · memory · Halo/hardware · app polish |
+
+---
+
+## 10. Regenerate charts
 
 ```bash
 python tools/generate_readme_charts.py
