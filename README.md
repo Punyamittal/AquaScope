@@ -1,20 +1,19 @@
 ![Project Banner](docs/readme-agent/banner.svg)
 
 # AquaScope
-### iQOO Hackathon — Flagship Entry · Team **Diet Code** (VIT Chennai)
+### Hackathon — Flagship Entry · Team **Diet Code** (VIT Chennai)
 
 > **For AI / human judges:** start with [`JUDGES.md`](JUDGES.md) (rubric · checklist · 5-min demo).  
-> **Field data report:** [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md) (charts from real iQOO captures).  
+> **Field data report:** [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md) (charts from real Phone captures).  
 > **Novelty / IP:** [`NOVELTY.md`](NOVELTY.md) (technical contributions · no patent filed yet).  
-> **Technical depth:** [`TECHNICAL_DEPTH.md`](TECHNICAL_DEPTH.md) (bat echolocation · damp health/structure risk · use cases · iQOO stack).  
+> **Technical depth:** [`TECHNICAL_DEPTH.md`](TECHNICAL_DEPTH.md) (bat echolocation · damp health/structure risk · use cases · Phone stack).  
 > **The acoustic X-ray in your pocket.**  
-> Turn an **iQOO 15** into a non-destructive vibro-acoustic moisture scanner + on-device home intelligence stack — no extra hardware, no cloud diagnosis required.
+> Turn a **Phone** into a non-destructive vibro-acoustic moisture scanner + on-device home intelligence stack — no extra hardware, no cloud diagnosis required.
 
 | | |
 |---|---|
 | **Project** | **AquaScope** |
 | **Team** | **Diet Code** · VIT Chennai |
-| **Target device** | iQOO 15 (Snapdragon 8 Elite Gen 5 · Android 16 / OriginOS 6) |
 | **Category** | On-device AI · Hardware-aware sensing · Health & infrastructure safety |
 | **Tagline** | Detect hidden wall dampness *before* mold and structural failure |
 | **Hardware used** | Dual stereo speakers · multi-mic array · Monster Halo · optional IR · rear camera + torch |
@@ -26,7 +25,7 @@
 
 Hidden dampness kills lungs and buildings. Visual surveys miss it. Lab NDT costs thousands and never leaves the specialist van. AquaScope puts that capability on the phone already in your hand — then SMRITI remembers every scan so you can **Ask** grounded questions on-device.
 
-Built **for iQOO first**: 48 kHz raw audio path, full-volume chirp, speakerphone coupling, Halo state light, and Snapdragon-class DSP headroom.
+Built **for Phone first**: 48 kHz raw audio path, full-volume chirp, speakerphone coupling, Halo state light, and Snapdragon-class DSP headroom.
 
 ---
 
@@ -38,7 +37,7 @@ Wall dampness and pipe seepage stay invisible behind plaster until mold and maso
 
 ## Solution
 
-**AquaScope** — vibro-acoustic contact scan on iQOO  
+**AquaScope** — vibro-acoustic contact scan on Phone  
 **SMRITI** — episodic memory + local Ask (Qwen) + Neural Core (Guardian, screen OCR, PPG heart rate)
 
 ### Acoustic pipeline (5 steps)
@@ -58,7 +57,7 @@ Wall dampness and pipe seepage stay invisible behind plaster until mold and maso
 
 ---
 
-## Field data — real iQOO captures
+## Field data — real Phone captures
 
 > Pulled from device `locations.json` · charts auto-generated via `python tools/generate_readme_charts.py`
 
@@ -83,13 +82,13 @@ Full analysis → [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md)
 
 ---
 
-## Demo metrics *(internal iQOO lab + field pilots)*
+## Demo metrics
 
-> Showcase numbers from controlled drywall / pipe jigs and repeated iQOO 15 runs. Screening tool — not a certified NDT certificate.
+> Showcase numbers from controlled drywall / pipe jigs and repeated Phone  runs. Screening tool — not a certified NDT certificate.
 
 | Metric | Result |
 |---|---|
-| Scan duration (chirp → score) | **~2.8 s** median on iQOO 15 |
+| Scan duration (chirp → score) | **~2.8 s** median on Phone  |
 | DSP peak RAM | **&lt; 180 MB** (sensing path) |
 | Dry-vs-dry score variance | **&lt; 8 pts** typical |
 | Dry→wet detection lift (lab jig) | **+41–67 pts** anomaly rise |
@@ -105,7 +104,7 @@ Full analysis → [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md)
 
 ---
 
-## iQOO 15 hardware advantage
+## Phone  hardware advantage
 
 | Subsystem | How AquaScope uses it |
 |---|---|
@@ -117,7 +116,7 @@ Full analysis → [`docs/reports/DATA_REPORT.md`](docs/reports/DATA_REPORT.md)
 | **Rear camera + torch** | Fingertip PPG wellness heart-rate |
 | **Optional IR** | Guardian-triggered consumer IR actions when armed |
 
-Device profile: [`IqooDeviceProfile.kt`](app/src/main/java/com/aquascope/audio/IqooDeviceProfile.kt)
+Device profile: [`PhoneDeviceProfile.kt`](app/src/main/java/com/aquascope/audio/PhoneDeviceProfile.kt)
 
 ---
 
@@ -144,7 +143,7 @@ AquaScope / SMRITI AQUA
 
 ```mermaid
 flowchart TB
-  subgraph iqoo [iQOO 15 Hardware]
+  subgraph Phone [Phone Hardware]
     SP[Dual speakers]
     MIC[Multi-mic array]
     HALO[Monster Halo]
@@ -232,7 +231,7 @@ mindmap
 
 ```mermaid
 flowchart LR
-  Phone[iQOO 15] --> Chirp[Chirp 80Hz–16kHz]
+  Phone--> Chirp[Chirp 80Hz–16kHz]
   Chirp --> Mic[Raw mic capture]
   Mic --> DSP[FFT deconvolution]
   DSP --> Feat[Resonance · Decay · Spectrum]
@@ -247,7 +246,7 @@ flowchart LR
 
 ## Key features
 
-- **Zero-hardware NDT-style screening** on stock iQOO audio  
+- **Zero-hardware NDT-style screening** on stock Phone audio  
 - **Per-location dry baselines** + optional moist teaching  
 - **Real scoring** (distance / LDA) — no staged demo score bands  
 - **Session PDF reports** with charts for inspectors  
@@ -257,7 +256,7 @@ flowchart LR
 
 ---
 
-## Build & run (iQOO 15)
+## Build & run 
 
 ```bash
 # JDK 17 recommended
@@ -265,7 +264,7 @@ flowchart LR
 ```
 
 1. Open in Android Studio (Hedgehog+) · sync Gradle  
-2. Deploy to a **physical iQOO 15** (emulator ≠ usable acoustics)  
+2. Deploy to a **physical Phone ** (emulator ≠ usable acoustics)  
 3. Grant mic (and camera / notifications as prompted for Neural Core)  
 4. Disable DND / game audio boosters that duck media volume  
 5. Hold phone **flush** — speaker + mic both contact the surface  
@@ -303,16 +302,15 @@ AquaScope / SMRITI AQUA is a **wellness and inspection screening** product. It d
 
 ## Team · Diet Code (VIT Chennai)
 
-**Project:** AquaScope · iQOO Open Innovation Hackathon
+**Project:** AquaScope 
 
 | Name | Role | Project designations |
 |---|---|---|
 | **Punya Mittal** | **Team Leader · AI Engineer** | Vibro-acoustic DSP · anomaly scoring / LDA · on-device Ask (Qwen / MediaPipe) · SMRITI grounding · Neural Core AI |
-| **Ayush Upadhya** | **Full Stack Developer** | Android Scan / Ask UI · session PDF reports · charts & data pipelines · product flows · integration testing |
-| **Shivam Goel** | **Full Stack Developer** | Neural Core (Guardian / Screen OCR / PPG) · episodic memory · Halo / hardware UX · end-to-end app polish |
+
 
 **Institution:** Vellore Institute of Technology (VIT), Chennai
 
 AquaScope — sensing the home, remembering what matters, answering only from evidence.
 
-`Built for iQOO · Runs on-device · Scales to every pocket`
+
